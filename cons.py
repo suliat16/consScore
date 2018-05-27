@@ -26,7 +26,6 @@ import json
 import requests
 from Bio.Align.Applications import ClustalwCommandline as cline
 
-
 base_url = 'http://www.orthodb.org/'
 headers = {'Content-Type': 'application/json'}
     
@@ -108,8 +107,7 @@ def get_alignment(fastafile = "", path = r"/weyr/software/clustalw2/v2.1-bin.app
 def get_information():
     """
     """
-    
-    
+    #Todo: Implement the information getting stuff
     
     
     
