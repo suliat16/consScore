@@ -64,20 +64,30 @@ def retrieve_OMA(sequence):
             print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
         return None
 
-def OMA_to_IDlist(OMAlist):
+def OMA_to_IDlist(OMAlist, sequencelist):
     """
-    """
-    canonlist = []
-    for o in OMAlist:
-        canonID = o['canonicalid']
-        canonlist = list.append(canonID)
+    Takes a list of Canonical protein IDs and a list of protein sequences and
+    returns a dictionary mapping the IDs to the sequences.
+    
+    Args:
+        OMAlist(list): A list of strings- these are IDs can be used to query 
+        Uniprot, for example
+        sequencelist(list): A list of strings, where the strings are the single
+        letter protein sequences of the proteins referenced in the OMAlist. Note
+        that the entries of this list must be in the same order as the entries in 
+        the previous list, fot this to work
         
+    Returns:
+        A dictionary, where each key is a member of OMAlist, and maps to a value
+        from sequencelist, at the same index.
+    
+    """ 
     seq_dict = {}
-    for c in canonlist:
-        
+    for idx, o in enumerate(OMAlist):
+        seq_dict[o] = sequencelist[idx]
+    return seq_dict
     
-    
-    
+ 
     
 def get_orthoDBids(filepath):
     """
