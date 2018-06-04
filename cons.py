@@ -16,13 +16,12 @@ from Bio.SubsMat import FreqTable
 
 ORTHODB_BASE_URL = 'http://www.orthodb.org/'
 OMA_BASE_URL = 'http://omabrowser.org/api'
+EBI_BASE_URL = 'www.ebi.ac.uk/proteins/api'
 HEADERS = {'Content-Type': 'application/json'}
 FREQUENCIES = dict(A=0.05, C=0.05, D=0.05, E=0.05, F=0.05, G=0.05, H=0.05,
                    I=0.05, K=0.05, L=0.05, M=0.05, N=0.05, P=0.05, Q=0.05, 
                    R=0.05, S=0.05, T=0.05, V=0.05, W=0.05, Y=0.05)
 FREQ_TABLE = FreqTable.FreqTable(FREQUENCIES, 2)
-
-
 
 def retrieve_OMA(sequence):
     """
@@ -43,12 +42,8 @@ def retrieve_OMA(sequence):
         response = json.loads(response.content.decode('utf-8'))
         #TODO: Save the next parameter as an object variable
         save = response['targets']
-        save = save[0]['omaid']
-        url = '{0}/protein/{1}/orthologs/'.format(OMA_BASE_URL, save)
-        response = requests.get(url, headers=HEADERS)
-        if response. status_code == 200:
-            return json.loads(response.content.decode('utf-8'))
-         #returns a dictionary of ortholog ids and info, but not sequences
+        return save[0]['canonicalid']
+        
     else:
         if response.status_code == 500:
             print('[!][{0}] Server Error'.format(response.status_code))
@@ -64,31 +59,51 @@ def retrieve_OMA(sequence):
             print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
         return None
 
-def OMA_to_IDlist(OMAlist, sequencelist):
+def OMA_to_orthoID(omaid):
+    """
+    """
+    url = '{0}/protein/{1}/orthologs/'.format(OMA_BASE_URL, omaid)
+    response = requests.get(url, headers=HEADERS)
+    if response. status_code == 200:
+        intro = json.loads(response.content.decode('utf-8'))
+        return intro['canonicalid']
+    else:
+        if response.status_code == 500:
+            print('[!][{0}] Server Error'.format(response.status_code))
+        elif response.status_code == 404:
+            print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
+        elif response.status_code == 401:
+            print('[!] [{0}] Authentication Failed'.format(response.status_code))
+        elif response.status_code == 400:
+            print('[!] [{0}] Bad Request'.format(response.status_code))
+        elif response.status_code == 300:
+            print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
+        else:
+            print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
+        return None
+
+def OMA_to_seqdict(OMAlist, sequencelist):
     """
     Takes a list of Canonical protein IDs and a list of protein sequences and
     returns a dictionary mapping the IDs to the sequences.
     
     Args:
-        OMAlist(list): A list of strings- these are IDs can be used to query 
-        Uniprot, for example
+        OMAlist(list): A list of strings-canonical protein IDs, which can be used
+        to query Uniprot, for example
         sequencelist(list): A list of strings, where the strings are the single
         letter protein sequences of the proteins referenced in the OMAlist. Note
         that the entries of this list must be in the same order as the entries in 
-        the previous list, fot this to work
+        the previous list.
         
     Returns:
         A dictionary, where each key is a member of OMAlist, and maps to a value
         from sequencelist, at the same index.
-    
     """ 
     seq_dict = {}
     for idx, o in enumerate(OMAlist):
         seq_dict[o] = sequencelist[idx]
     return seq_dict
-    
- 
-    
+      
 def get_orthoDBids(filepath):
     """
     Take a fasta file and return a list of OrthoDB cluster IDs. Note that this
