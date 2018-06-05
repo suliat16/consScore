@@ -8,6 +8,7 @@
 #import os
 import json
 import requests
+import os
 from Bio import SeqIO as sq
 from Bio.Align.Applications import ClustalwCommandline as cline
 from Bio import AlignIO as al
@@ -16,7 +17,7 @@ from Bio.SubsMat import FreqTable
 
 ORTHODB_BASE_URL = 'http://www.orthodb.org/'
 OMA_BASE_URL = 'http://omabrowser.org/api'
-EBI_BASE_URL = 'www.ebi.ac.uk/proteins/api'
+UNI_BASE_URL = 'http://www.uniprot.org/uploadlists/'
 HEADERS = {'Content-Type': 'application/json'}
 FREQUENCIES = dict(A=0.05, C=0.05, D=0.05, E=0.05, F=0.05, G=0.05, H=0.05,
                    I=0.05, K=0.05, L=0.05, M=0.05, N=0.05, P=0.05, Q=0.05, 
@@ -25,15 +26,14 @@ FREQ_TABLE = FreqTable.FreqTable(FREQUENCIES, 2)
 
 def retrieve_OMA(sequence):
     """
-    Takes a protein sequence and returns a json object with ortholog
-    information
+    Takes a protein sequence and returns the oma id of the best protein 
+    match
     
     Args:
         sequence (str): The single letter protein sequence to be queried
         
     Returns: 
-        A parseable json object containing multiple dictionaries, each 
-        corresponding to an ortholog
+       A string containing the ID of the best protein match for the entered sequence
     """
     url = '{0}/sequence/?query={1}'.format(OMA_BASE_URL, sequence)
     response = requests.get(url, headers=HEADERS)
@@ -42,7 +42,7 @@ def retrieve_OMA(sequence):
         response = json.loads(response.content.decode('utf-8'))
         #TODO: Save the next parameter as an object variable
         save = response['targets']
-        return save[0]['canonicalid']
+        return save[0]['omaid']
         
     else:
         if response.status_code == 500:
@@ -61,10 +61,17 @@ def retrieve_OMA(sequence):
 
 def OMA_to_orthoID(omaid):
     """
+    Takes the OMA specific ID of a protein species, and returns a list of the 
+    canonical IDs of the orthologs of that protein
+    
+    Args: 
+        omaid(str): An OMA specific protein ID
+    Returns:
+        A list of strings, the canonical IDS for the orthologs of the protein
     """
     url = '{0}/protein/{1}/orthologs/'.format(OMA_BASE_URL, omaid)
     response = requests.get(url, headers=HEADERS)
-    if response. status_code == 200:
+    if response.status_code == 200:
         intro = json.loads(response.content.decode('utf-8'))
         return intro['canonicalid']
     else:
@@ -82,27 +89,22 @@ def OMA_to_orthoID(omaid):
             print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
         return None
 
-def OMA_to_seqdict(OMAlist, sequencelist):
+def OMA_to_fasta(OMAid):
     """
-    Takes a list of Canonical protein IDs and a list of protein sequences and
-    returns a dictionary mapping the IDs to the sequences.
+    Takes an OMA specific ID and returns a fasta string of the orthologs assciated 
+    with that protein
     
     Args:
-        OMAlist(list): A list of strings-canonical protein IDs, which can be used
-        to query Uniprot, for example
-        sequencelist(list): A list of strings, where the strings are the single
-        letter protein sequences of the proteins referenced in the OMAlist. Note
-        that the entries of this list must be in the same order as the entries in 
-        the previous list.
-        
+        OMAid(str):  The OMA specific ID of a desired protein
     Returns:
-        A dictionary, where each key is a member of OMAlist, and maps to a value
-        from sequencelist, at the same index.
-    """ 
-    seq_dict = {}
-    for idx, o in enumerate(OMAlist):
-        seq_dict[o] = sequencelist[idx]
-    return seq_dict
+        A single fasta string containing the orthologs of that protein, as 
+        dictated by OMA. 
+    """
+    url = 'https://omabrowser.org/oma/vps/{0}/fasta/'.format(OMAid)
+    response = requests.get(url)
+    orthologs = str(response.text)
+    orthologs = orthologs.replace(os.linesep, '')        
+    return orthologs
       
 def get_orthoDBids(filepath):
     """
@@ -114,7 +116,8 @@ def get_orthoDBids(filepath):
         file of interest.
     Returns:
         A list of OrthoDB ortholog IDs which can then be used to retrieve a list
-        of orthologs in a fasta file.
+        of orthologs in a fasta file. Note that when the fasta file is parsed, 
+        the first id is the OMA ID, and the second is the canonical id. 
     """
     with open(filepath) as workfile:
         prerec = list(sq.parse(workfile, "fasta"))
