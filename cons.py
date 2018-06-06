@@ -47,7 +47,6 @@ class OrthologFinder:
             save = response['targets']
             self.id = save[0]['omaid']
             self.is_OMA = True
-            return self.id
 
         else:
             if response.status_code == 500:
@@ -62,14 +61,14 @@ class OrthologFinder:
                 print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
             else:
                 print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-            return "Error getting OMA ID"
+
 
     def update_OMA_orthoIDs(self):
         """
         Takes the OMA specific ID of a protein species, and returns a list of the
         canonical IDs of the orthologs of that protein
 
-        Args: 
+        Args:
             omaid(str): An OMA specific protein ID
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
@@ -93,7 +92,7 @@ class OrthologFinder:
                 print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
             else:
                 print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-            return None
+
 
     def OMA_to_fasta(self):
         """
@@ -104,7 +103,8 @@ class OrthologFinder:
             OMAid(str):  The OMA specific ID of a desired protein
         Returns:
             A single fasta string containing the orthologs of that protein, as
-            dictated by OMA.
+            dictated by OMA.Note that when the fasta file is parsed,
+            the first id is the OMA ID, and the second is the canonical id.
         """
         url = 'https://omabrowser.org/oma/vps/{0}/fasta/'.format(self.id)
         response = requests.get(url)
@@ -114,13 +114,13 @@ class OrthologFinder:
 
     def get_orthoDBids(self):
         """
-        Take a fasta file and return a list of OrthoDB cluster IDs. Note that this
+        Take a fasta file and return an OrthoDB cluster ID. Note that this
         is only useful for animal proteins.
 
         Returns:
-            A list of OrthoDB ortholog IDs which can then be used to retrieve a list
-            of orthologs in a fasta file. Note that when the fasta file is parsed,
-            the first id is the OMA ID, and the second is the canonical id.
+            An OrthoDB ortholog ID which can then be used to retrieve a list
+            of orthologs in a fasta file. The website returns a list of IDs, with
+            the best listed first- the first ID of the list is pulled.
         """
 
         url = '{0}/blast?seq={1}&level=33208&limit=100'.format(self.ORTHODB_BASE_URL, self.orthologs)
@@ -130,7 +130,9 @@ class OrthologFinder:
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             response = json.loads(response.content.decode('utf-8'))
-            return response['data']
+            IDlist = response['data']
+            self.is_ortho = True
+            self.id = IDlist[0]
 
         # What exception should I raise? Do I have to make my own?
         else:
@@ -146,7 +148,7 @@ class OrthologFinder:
                 print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
             else:
                 print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-            return None
+
 
     def retrieve_orthoDBlogs(self):
         """
@@ -162,35 +164,43 @@ class OrthologFinder:
         if response.status_code == 200:
             self.orthologs = response.content.decode('utf-8')
             return self.orthologs
-
-        elif response.status_code == 500:
-            print('[!][{0}] Server Error'.format(response.status_code))
-        elif response.status_code == 404:
-            print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
-        elif response.status_code == 401:
-            print('[!] [{0}] Authentication Failed'.format(response.status_code))
-        elif response.status_code == 400:
-            print('[!] [{0}] Bad Request'.format(response.status_code))
-        elif response.status_code == 300:
-            print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
         else:
-            print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-
+            if response.status_code == 500:
+                print('[!][{0}] Server Error'.format(response.status_code))
+            elif response.status_code == 404:
+                print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
+            elif response.status_code == 401:
+                print('[!] [{0}] Authentication Failed'.format(response.status_code))
+            elif response.status_code == 400:
+                print('[!] [{0}] Bad Request'.format(response.status_code))
+            elif response.status_code == 300:
+                print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
+            else:
+                print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
+            return None
     def get_orthologs(self):
         """
         """
+        #I had return statements in every conditional block, but it was giving
+        #me issues- why?
+        output = None
         if self.has_run:
-            return self.orthologs
+            output = self.orthologs
         else:
             self.has_run = True
-            ID = self.retrieve_OMA()
-            if ID != "Error getting OMA ID":
-            #TODO: Get a boolean to mark the success of these operations instead
-                return self.OMA_to_fasta()
-            elif ID == "Error getting OMA ID":
+            self.retrieve_OMA()
+            if self.is_OMA:
+                output = self.OMA_to_fasta()
+            elif self.is_ortho:
                 self.get_orthoDBids()
-                return self.retrieve_orthoDBlogs()
+                output = self.retrieve_orthoDBlogs()
+            else:
+                output = "Could not determine the orthologs of your sequence."
+        return output
 
+
+
+#TODO: Move this into another class, jeez
 def get_alignment(fastafile, path):
     """
     r"/weyr/software/clustalw2/v2.1-bin.app/bin/clustalw2"
