@@ -109,8 +109,8 @@ class OrthologFinder:
         url = 'https://omabrowser.org/oma/vps/{0}/fasta/'.format(self.id)
         response = requests.get(url)
         orthologs = str(response.text)
-        orthologs = orthologs.replace(os.linesep, '')
-        return orthologs
+        self.orthologs = orthologs.replace(os.linesep, '')
+        return self.orthologs
 
     def get_orthoDBids(self):
         """
@@ -123,7 +123,7 @@ class OrthologFinder:
             the best listed first- the first ID of the list is pulled.
         """
 
-        url = '{0}/blast?seq={1}&level=33208&limit=100'.format(self.ORTHODB_BASE_URL, self.orthologs)
+        url = '{0}/blast?seq={1}&level=33208&limit=100'.format(self.ORTHODB_BASE_URL, self.sequence)
         # level in this case refers to the taxid from ncbi database- currently set
         # at metazoa
         # limit 100 means that at most 100 OrthoDB IDs will be returned- not general
