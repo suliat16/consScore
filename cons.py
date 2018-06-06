@@ -180,9 +180,10 @@ class OrthologFinder:
             return None
     def get_orthologs(self):
         """
+        Returns the orthologous proteins to the sequence stored in the object
         """
         #I had return statements in every conditional block, but it was giving
-        #me issues- why?
+        #me issues- why? Also IDK how to beef up that docstring
         output = None
         if self.has_run:
             output = self.orthologs
