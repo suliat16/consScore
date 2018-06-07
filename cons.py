@@ -29,9 +29,8 @@ class OrthologFinder:
         self.orthologs = ""
         self.has_run = False
         self.is_OMA = False
-        self.is_ortho = False
 
-    def retrieve_OMA(self):
+    def retrieve_OMAid(self):
         """
         Takes a protein sequence and returns the oma id of the best protein
         match
@@ -42,7 +41,6 @@ class OrthologFinder:
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
-
         url = '{0}/sequence/?query={1}'.format(self.OMA_BASE_URL, self.sequence)
         response = requests.get(url, headers=self.HEADERS)
 
@@ -116,7 +114,7 @@ class OrthologFinder:
         self.orthologs = orthologs.replace(os.linesep, '')
         return self.orthologs
 
-    def get_orthoDBids(self):
+    def retrieve_orthoDBids(self):
         """
         Take a fasta file and return an OrthoDB cluster ID. Note that this
         is only useful for animal proteins.
@@ -154,7 +152,7 @@ class OrthologFinder:
                 print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
 
 
-    def retrieve_orthoDBlogs(self):
+    def orthoDB_to_fasta(self):
         """
         Takes an OrthoDB ID from a list of IDs, and returns a file containing
         sequences in fasta format
@@ -188,17 +186,18 @@ class OrthologFinder:
         """
         #I had return statements in every conditional block, but it was giving
         #me issues- why? Also IDK how to beef up that docstring
+   
         output = None
         if self.has_run:
             output = self.orthologs
         else:
             self.has_run = True
-            self.retrieve_OMA()
+            self.retrieve_OMAid()
             if self.is_OMA:
                 output = self.OMA_to_fasta()
-            elif self.is_ortho:
-                self.get_orthoDBids()
-                output = self.retrieve_orthoDBlogs()
+            elif not self.is_OMA:
+                self.retrieve_orthoDBids()
+                output = self.orthoDB_to_fasta()
             else:
                 output = "Could not determine the orthologs of your sequence."
         return output

@@ -17,10 +17,10 @@ class TestCons(unittest.TestCase):
         strlyz = ("MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGY"
                   "NTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVAC"
                   "AKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV")
-        lyz = cons.OrthologFinder(strlyz)
+        self.lyz = cons.OrthologFinder(strlyz)
         stragg = ('YYYYYYYYYYYVVVVVVVVVVVVBBBBBBBBBBBAAAAAAAAAAANNNNNNNNNNN'
                   'MMMMMMMMMMMWWWWWWWWWWWWWCCCCCCCCCCSSSSSSSSSS')
-        aggregate = cons.OrthologFinder(stragg)
+        self.aggregate = cons.OrthologFinder(stragg)
         arabidopsisCDC48A = ("MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPAT"
                               "MEKLQLFRGDTILIKGKKRKDTVCIALADETCEEPKIRMNKVVRSNLRVR"
                               "LGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLKPYFLEAYRP"
@@ -38,7 +38,7 @@ class TestCons(unittest.TestCase):
                               "ENIEKDIEKEKRRSENPEAMEEDGVDEVSEIKAAHFEESMKYARRSVSDA"
                               "DIRKYQAFAQTLQQSRGFGSEFRFENSAGSGATTGVADPFATSAAAAGDDD"
                               "DLYN")
-        CDC48A = cons.OrthologFinder(arabidopsisCDC48A)
+        self.CDC48A = cons.OrthologFinder(arabidopsisCDC48A)
 
         humanPYK2 = ("MSGVSEPLSRVKLGTLRRPEGPAEPMVVVPVDVEKEDVRILKVCFYSNSFNPGKNF"
                       "KLVKCTVQTEIREIITSILLSGRIGPNIRLAECYGLRLKHMKSDEIHWLHPQMTVGE"
@@ -58,8 +58,36 @@ class TestCons(unittest.TestCase):
                       "QKPPRLGAQSIQPTANLDRTDDLVYLNVMELVRAVLELKNELCQLPPEGYVVVVKNV"
                       "GLTLRKLIGSVDDLLPSLPSSSRTEIEGTQKLLNKDLAELINKMRLAQQNAVTSLSE"
                       "ECKRQMLTASHTLAVDAKNLLDAVDQAKVLANLAHPPAE")
-        PYK2 = cons.OrthologFinder(humanPYK2)
-
-    def test_retOMA_lyz(self):
-        pass
+        self.PYK2 = cons.OrthologFinder(humanPYK2)
         
+    def test_ologs_lyz(self):
+        lyzFasta = self.lyz.get_orthologs()
+        self.assertTrue('LYSC_HUMAN' in lyzFasta)
+        
+#    def test_ologs_stragg(self):
+#        ##SUUUUUUUPER slow when querying the database - database times out. 
+#        straggFasta = self.aggregate.get_orthologs()
+#        self.assertEqual(straggFasta, "Could not determine the orthologs of your sequence")
+#    
+    def test_ologs_arab(self):
+        arabFasta = self.CDC48A.get_orthologs()
+        self.assertTrue('Arabidopsis' in arabFasta)
+        
+    def test_ologs_pyk(self):
+        pykFasta = self.PYK2.get_orthologs()
+        self.assertTrue('FAK2_HUMAN' in pykFasta)
+        
+    def test_OMAid_lyz(self):
+        self.lyz.retrieve_OMAid()
+        self.assertEqual(self.lyz.id,'HUMAN06786')
+        
+    def test_OMAid_arab(self):
+        self.CDC48A.retrieve_OMAid()
+        self.assertEqual(self.CDC48A.id, 'ARATH09528')
+        
+    def test_OMAid_pyk(self):
+        self.PYK2.retrieve_OMAid()
+        self.assertEqual(self.PYK2.id,'HUMAN27610')
+        
+if __name__ == '__main__':
+    unittest.main()
