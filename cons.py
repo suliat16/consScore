@@ -1,8 +1,8 @@
 #/usr/bin/env python3
 
 """
-    Intakes a protein sequence in fasta format, and returns the conservation
-    score of the residues in the protein
+Intakes a protein sequence in fasta format, and returns the conservation
+score of the residues in the protein
 """
 
 #import os
@@ -12,7 +12,11 @@ import requests
 from Bio.Align.Applications import ClustalwCommandline as cline
 
 class OrthologFinder:
+
     """
+    Queries OMA and OrthoDB with a protein sequence to try and retrieve the
+    orthologs of that protein. The ortholog data does not include the original
+    sequence, but instead the sequence of the closest protein match in the database.
     """
     ORTHODB_BASE_URL = 'http://www.orthodb.org/'
     OMA_BASE_URL = 'http://omabrowser.org/api'
@@ -201,7 +205,7 @@ class OrthologFinder:
 
 
 
-#TODO: Move this into another class, jeez
+#TODO: Move this into another class/file, jeez
 def get_alignment(fastafile, path):
     """
     r"/weyr/software/clustalw2/v2.1-bin.app/bin/clustalw2"
