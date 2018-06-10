@@ -9,17 +9,15 @@ score of the residues in the protein
 import json
 import os
 import requests
-from Bio.Align.Applications import ClustalwCommandline as cline
 
 class OrthologFinder:
 
     """
-    Queries OMA and OrthoDB with a protein sequence to try and retrieve the
+    Queries OMA with a protein sequence to try and retrieve the
     orthologs of that protein. The ortholog data does not include the original
     sequence, but instead the sequence of the closest protein match in the database.
     """
-    ORTHODB_BASE_URL = 'http://www.orthodb.org/'
-    OMA_BASE_URL = 'http://omabrowser.org/api'
+    OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
 
     def __init__(self, sequence):
@@ -28,7 +26,7 @@ class OrthologFinder:
         self.ortholog_ids = []
         self.orthologs = ""
         self.has_run = False
-        self.is_OMA = False
+        self.save_status = 0
 
     def retrieve_OMAid(self):
         """
@@ -41,29 +39,16 @@ class OrthologFinder:
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
-        url = '{0}/sequence/?query={1}'.format(self.OMA_BASE_URL, self.sequence)
+        url = self.build_url(tail='/sequence/?query={0}', variation=[self.sequence])
         response = requests.get(url, headers=self.HEADERS)
-
         if response.status_code == 200:
             response = json.loads(response.content.decode('utf-8'))
             save = response['targets']
             self.id = save[0]['omaid']
-            self.is_OMA = True
 
         else:
-            if response.status_code == 500:
-                print('[!][{0}] Server Error'.format(response.status_code))
-            elif response.status_code == 404:
-                print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
-            elif response.status_code == 401:
-                print('[!] [{0}] Authentication Failed'.format(response.status_code))
-            elif response.status_code == 400:
-                print('[!] [{0}] Bad Request'.format(response.status_code))
-            elif response.status_code == 300:
-                print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
-            else:
-                print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-
+            self.save_status = response.status_code
+            raise ImportError
 
     def update_OMA_orthoIDs(self):
         """
@@ -75,26 +60,16 @@ class OrthologFinder:
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
         """
-        url = '{0}/protein/{1}/orthologs/'.format(self.OMA_BASE_URL, self.id)
+
+        url = self.build_url(tail='/protein/{0}/orthologs/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             intro = json.loads(response.content.decode('utf-8'))
             self.ortholog_ids = intro['canonicalid']
 
         else:
-            if response.status_code == 500:
-                print('[!][{0}] Server Error'.format(response.status_code))
-            elif response.status_code == 404:
-                print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
-            elif response.status_code == 401:
-                print('[!] [{0}] Authentication Failed'.format(response.status_code))
-            elif response.status_code == 400:
-                print('[!] [{0}] Bad Request'.format(response.status_code))
-            elif response.status_code == 300:
-                print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
-            else:
-                print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-
+            self.save_status = response.status_code
+            raise ImportError
 
     def OMA_to_fasta(self):
         """
@@ -108,119 +83,47 @@ class OrthologFinder:
             dictated by OMA.Note that when the fasta file is parsed,
             the first id is the OMA ID, and the second is the canonical id.
         """
-        url = 'https://omabrowser.org/oma/vps/{0}/fasta/'.format(self.id)
+        url = self.build_url(tail='/oma/vps/{0}/fasta/', variation=[self.id])
         response = requests.get(url)
-        orthologs = str(response.text)
-        self.orthologs = orthologs.replace(os.linesep, '')
-        return self.orthologs
-
-    def retrieve_orthoDBids(self):
-        """
-        Take a fasta file and return an OrthoDB cluster ID. Note that this
-        is only useful for animal proteins.
-
-        Returns:
-            An OrthoDB ortholog ID which can then be used to retrieve a list
-            of orthologs in a fasta file. The website returns a list of IDs, with
-            the best listed first- the first ID of the list is pulled.
-        """
-
-        url = '{0}/blast?seq={1}&level=33208&limit=100'.format(self.ORTHODB_BASE_URL, self.sequence)
-        # level in this case refers to the taxid from ncbi database- currently set
-        # at metazoa
-        # limit 100 means that at most 100 OrthoDB IDs will be returned- not general
-        response = requests.get(url, headers=self.HEADERS)
-        if response.status_code == 200:
-            response = json.loads(response.content.decode('utf-8'))
-            IDlist = response['data']
-            self.is_ortho = True
-            self.id = IDlist[0]
-
-        # What exception should I raise? Do I have to make my own?
-        else:
-            if response.status_code == 500:
-                print('[!][{0}] Server Error'.format(response.status_code))
-            elif response.status_code == 404:
-                print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
-            elif response.status_code == 401:
-                print('[!] [{0}] Authentication Failed'.format(response.status_code))
-            elif response.status_code == 400:
-                print('[!] [{0}] Bad Request'.format(response.status_code))
-            elif response.status_code == 300:
-                print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
-            else:
-                print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-
-
-    def orthoDB_to_fasta(self):
-        """
-        Takes an OrthoDB ID from a list of IDs, and returns a file containing
-        sequences in fasta format
-
-        Returns: A string in fasta format containing all of the orthologs for
-            that ID
-        """
-        url = '{0}/fasta?id={1}'.format(self.ORTHODB_BASE_URL, self.id)
-        response = requests.get(url, headers=self.HEADERS)
 
         if response.status_code == 200:
-            self.orthologs = response.content.decode('utf-8')
+            orthologs = str(response.text)
+            self.orthologs = orthologs.replace(os.linesep, '')
             return self.orthologs
         else:
-            if response.status_code == 500:
-                print('[!][{0}] Server Error'.format(response.status_code))
-            elif response.status_code == 404:
-                print('[!] [{0}] URL not found: [{1}]'.format(response.status_code, url))
-            elif response.status_code == 401:
-                print('[!] [{0}] Authentication Failed'.format(response.status_code))
-            elif response.status_code == 400:
-                print('[!] [{0}] Bad Request'.format(response.status_code))
-            elif response.status_code == 300:
-                print('[!] [{0}] Unexpected Redirect'.format(response.status_code))
-            else:
-                print('[?] Unexpected Error: [HTTP {0}]: Content: {1}'.format(response.status_code, response.content))
-            return None
+            self.save_status = response.status_code
+            raise ImportError
+
     def get_orthologs(self):
         """
         Returns the orthologous proteins to the sequence stored in the object
         """
         #I had return statements in every conditional block, but it was giving
         #me issues- why? Also IDK how to beef up that docstring
-   
-        output = None
-        if self.has_run:
-            output = self.orthologs
-        else:
-            self.has_run = True
-            self.retrieve_OMAid()
-            if self.is_OMA:
-                output = self.OMA_to_fasta()
-            elif not self.is_OMA:
-                self.retrieve_orthoDBids()
-                output = self.orthoDB_to_fasta()
+
+        try:
+            output = None
+            if self.has_run:
+                output = self.orthologs
             else:
-                output = "Could not determine the orthologs of your sequence."
-        return output
+                self.has_run = True
+                self.retrieve_OMAid()
+                output = self.OMA_to_fasta()
+            return output
+        except ImportError:
+            print('There was an issue querying the database.')
+            print('Status code {0}'.format(self.save_status))
 
+    def build_url(self, tail, variation, base_url=OMA_BASE_URL):
+        """
+        Takes the passed parameters and builds a URL to query the OMA database
 
-
-#TODO: Move this into another class/file, jeez
-def get_alignment(fastafile, path):
-    """
-    r"/weyr/software/clustalw2/v2.1-bin.app/bin/clustalw2"
-
-    Takes a fasta file with multiple sequences as input, and outputs an alignment
-    file generated by Clustalw2
-
-    Args:
-        fastafile (str): The absolute path to the fasta file being aligned
-        path (str): The absolute path to the clustalw2 app
-
-    Returns: A .aln and .dnd file, both showing the alignments of the input
-        sequences
-    """
-
-    clus_cline = cline(path, infile=fastafile)
-    #assert os.path.isfile(clustalw_exe), "Clustal W executable missing"
-  #  stdout, stderr = clus_cline()  # This is the way its done on the biopython website
-    return clus_cline()
+        Args:
+            tail(str): The path and REST parameters that returns the desired info
+            variation(list): A list of strings that contain the parameters unique
+                to the query
+            base_url(str): The website that is being accessed, without any slashes
+        """
+        url = base_url + tail
+        url = url.format(*variation)
+        return url
