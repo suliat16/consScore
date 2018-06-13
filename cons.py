@@ -1,8 +1,8 @@
 #/usr/bin/env python3
 
 """
-Intakes a protein sequence in fasta format, and returns the conservation
-score of the residues in the protein
+Intakes a sequence in protein single letter alphabet, and returns the orthologs
+of the closest protein to that sequence
 """
 
 #import os
@@ -17,12 +17,14 @@ class OrthologFinder:
     orthologs of that protein. The ortholog data does not include the original
     sequence, but instead the sequence of the closest protein match in the database.
     """
+
     OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
 
+
     def __init__(self, sequence):
         self.sequence = sequence
-        self.id = None
+        self.id = ""
         self.ortholog_ids = []
         self.orthologs = ""
         self.has_run = False
@@ -39,16 +41,21 @@ class OrthologFinder:
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
-        url = self.build_url(tail='/sequence/?query={0}', variation=[self.sequence])
+        url = self.build_url(tail='/api/sequence/?query={0}', variation=[self.sequence])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
-            response = json.loads(response.content.decode('utf-8'))
-            save = response['targets']
-            self.id = save[0]['omaid']
-
-        else:
+            self.read_resp_retOMA(response)
+        if response.status_code == 504:
             self.save_status = response.status_code
-            raise ImportError
+            raise TimeoutError
+        if response.status_code != 200:
+            self.save_status = response.status_code
+            raise ImportError("Status code:{0}".format(self.save_status))
+
+    def read_resp_retOMA(self, response):
+        response = json.loads(response.content.decode('utf-8'))
+        save = response['targets']
+        self.id = save[0]['omaid']
 
     def update_OMA_orthoIDs(self):
         """
@@ -60,16 +67,20 @@ class OrthologFinder:
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
         """
-
-        url = self.build_url(tail='/protein/{0}/orthologs/', variation=[self.id])
+        url = self.build_url(tail='/api/protein/{0}/orthologs/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
-            intro = json.loads(response.content.decode('utf-8'))
-            self.ortholog_ids = intro['canonicalid']
-
+            self.read_resp_upOMA(response)
         else:
             self.save_status = response.status_code
-            raise ImportError
+            raise ImportError("Status code:{0}".format(self.save_status))
+
+    def read_resp_upOMA(self, response):
+        """
+        Retrieves the canonical IDs for the orthologs of the protein
+        """
+        intro = json.loads(response.content.decode('utf-8'))
+        self.ortholog_ids = intro[0]['canonicalid']
 
     def OMA_to_fasta(self):
         """
@@ -85,22 +96,26 @@ class OrthologFinder:
         """
         url = self.build_url(tail='/oma/vps/{0}/fasta/', variation=[self.id])
         response = requests.get(url)
-
         if response.status_code == 200:
-            orthologs = str(response.text)
-            self.orthologs = orthologs.replace(os.linesep, '')
-            return self.orthologs
+            return self.read_resp_OMAfasta(response)
         else:
             self.save_status = response.status_code
-            raise ImportError
+            message = "Status code: {0}".format(self.save_status)
+            raise ImportError(message)
+
+    def read_resp_OMAfasta(self, response):
+        """
+        Takes the  ortholog response, converts it to a string and removes newlines
+        """
+        orthologs = str(response.text)
+        self.orthologs = orthologs.replace(os.linesep, '')
+        return self.orthologs
 
     def get_orthologs(self):
         """
         Returns the orthologous proteins to the sequence stored in the object
         """
-        #I had return statements in every conditional block, but it was giving
-        #me issues- why? Also IDK how to beef up that docstring
-
+        ##Can I put the return statements in a finally block?
         try:
             output = None
             if self.has_run:
@@ -109,10 +124,13 @@ class OrthologFinder:
                 self.has_run = True
                 self.retrieve_OMAid()
                 output = self.OMA_to_fasta()
-            return output
+                return output
         except ImportError:
-            print('There was an issue querying the database.')
-            print('Status code {0}'.format(self.save_status))
+            output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
+            return output
+        except TimeoutError:
+            output = 'The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status)
+            return output
 
     def build_url(self, tail, variation, base_url=OMA_BASE_URL):
         """
