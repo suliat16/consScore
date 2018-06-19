@@ -5,7 +5,6 @@ Intakes a sequence in protein single letter alphabet, and returns the orthologs
 of the closest protein to that sequence
 """
 
-#import os
 import json
 import os
 import requests
@@ -80,7 +79,8 @@ class OrthologFinder:
         Retrieves the canonical IDs for the orthologs of the protein
         """
         intro = json.loads(response.content.decode('utf-8'))
-        self.ortholog_ids = intro[0]['canonicalid']
+        for i in intro:
+            self.ortholog_ids.append(i['canonicalid'])
 
     def OMA_to_fasta(self):
         """
