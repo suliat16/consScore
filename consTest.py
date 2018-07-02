@@ -62,7 +62,7 @@ class TestCons(unittest.TestCase):
         the_response._content = self.fresponse
         the_response.status_code = 200
         self.CDC48A.read_resp_OMAfasta(the_response)
-        self.assertTrue('CD48A_ARATH | self | [Arabidopsis thaliana]MSTPAESSDSKSKKDFSTAILERK' 
+        self.assertTrue('CD48A_ARATH | self | [Arabidopsis thaliana]\nMSTPAESSDSKSKKDFSTAILERK' 
                         in self.CDC48A.orthologs)
 
     def test_build_url_retOMA(self):

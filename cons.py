@@ -111,10 +111,9 @@ class OrthologFinder:
 
     def read_resp_OMAfasta(self, response):
         """
-        Takes the  ortholog response, converts it to a string and removes newlines
+        Takes the  ortholog response, converts it to a string
         """
-        orthologs = str(response.text)
-        self.orthologs = orthologs.replace(os.linesep, '')
+        self.orthologs = str(response.text)
         return self.orthologs
 
     def get_orthologs(self):
