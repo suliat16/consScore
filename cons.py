@@ -2,17 +2,19 @@
 
 """
 Intakes a sequence in protein single letter alphabet, and returns the orthologs
-of the closest protein to that sequence
+of the closest protein to that sequence. Either a string in fasta format, or the
+single letter alphabet sequence is required as input. 
 """
 
 import json
 import os
 import requests
+import re
 
 class OrthologFinder:
 
     """
-    Queries OMA with a protein sequence to try and retrieve the
+    Queries OMA with a protein sequence or fasta to try and retrieve the
     orthologs of that protein. The ortholog data does not include the original
     sequence, but instead the sequence of the closest protein match in the database.
     """
@@ -21,13 +23,16 @@ class OrthologFinder:
     HEADERS = {'Content-Type': 'application/json'}
 
 
-    def __init__(self, sequence):
-        self.sequence = sequence
+    def __init__(self, fasta):
+        self.fasta = fasta
+        self.sequence = ""
         self.id = ""
         self.ortholog_ids = []
         self.orthologs = ""
         self.has_run = False
         self.save_status = 0
+    
+ 
 
     def retrieve_OMAid(self):
         """
@@ -118,12 +123,14 @@ class OrthologFinder:
         ##Can I put the return statements in a finally block?
         try:
             output = None
+            self.sequence =  self.get_fasta_sequence(fasta=self.fasta)
             if self.has_run:
                 output = self.orthologs
             else:
                 self.has_run = True
                 self.retrieve_OMAid()
                 output = self.OMA_to_fasta()
+                output = self.sequence + output
                 return output
         except ImportError:
             output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
@@ -145,3 +152,44 @@ class OrthologFinder:
         url = base_url + tail
         url = url.format(*variation)
         return url
+    
+    def get_fasta_sequence(self, fasta):
+        """
+        Given a fasta file, return the sequence at the given index
+        
+        Args:
+            index(int): For a fasta file with multiple proteins, is the zero
+                indexed position of the desired protein within the file
+        
+        Returns: 
+            The sequence of the specified protein, as a single string, with newline
+            characters removed.
+        """
+        fstr= self.indv_block(st=fasta)
+        fstr=fstr[0]
+        fstr= fstr.splitlines()
+        for f in fstr:
+            if f.startswith('>'):
+                fstr.remove(f)
+        fstr= "".join(fstr)
+        return fstr
+    
+    def indv_block(self, st=""):
+        """
+        Return the header line and the sequence of individual constructs in a file
+        
+        Args:
+            st(str): The text contained in a fasta file, as a string. Consists of a 
+                header, which is inititated by > and ends with a newline. Subsequent 
+                lines are sequence data, until another > is found.
+            
+        Returns: 
+            A list of strings, where each string is the construct header and sequence,
+            as a single string. For example, a file containing 4 proteins would
+            a list of 4 strings. Each string begins with >, and contains both the
+            headers and the newline characters. 
+        """
+        fstr=re.split('>',st)
+        fstr = list(filter(None, fstr))
+        fstr = ['>' + f for f in fstr]
+        return fstr

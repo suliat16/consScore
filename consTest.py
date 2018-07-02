@@ -60,12 +60,13 @@ class TestCons(unittest.TestCase):
     def test_read_resp_OMAfasta(self):
         the_response = Response()
         the_response._content = self.fresponse
+        the_response.status_code = 200
         self.CDC48A.read_resp_OMAfasta(the_response)
         self.assertTrue('CD48A_ARATH | self | [Arabidopsis thaliana]MSTPAESSDSKSKKDFSTAILERK' 
                         in self.CDC48A.orthologs)
 
-# The following tests all query the API directly
     def test_build_url_retOMA(self):
+        self.lyz.sequence = 'MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV'
         self.assertEqual(self.lyz.build_url(tail='/api/sequence/?query={0}', variation=[self.lyz.sequence]), 'https://omabrowser.org/api/sequence/?query=MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV')
 
     def test_build_url_tofasta(self):
@@ -88,6 +89,6 @@ class TestCons(unittest.TestCase):
         with self.assertRaises(ImportError):
             requests_mock.requests.get.return_value = None
             self.aggregate.update_OMA_orthoIDs()
-        
+    
 if __name__ == '__main__':
     unittest.main()
