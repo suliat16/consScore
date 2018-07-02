@@ -15,8 +15,9 @@ class OrthologFinder:
 
     """
     Queries OMA with a protein sequence or fasta to try and retrieve the
-    orthologs of that protein. The ortholog data does not include the original
-    sequence, but instead the sequence of the closest protein match in the database.
+    orthologs of that protein. The ortholog data includes the original
+    sequence, which is first in the results, as well as the sequence of the 
+    closest protein match in the database, which is labelled with self.
     """
 
     OMA_BASE_URL = 'https://omabrowser.org'
@@ -137,6 +138,9 @@ class OrthologFinder:
             return output
         except TimeoutError:
             output = 'The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status)
+            return output
+        except IndexError: 
+            output = "Input sequence is empty!"
             return output
 
     def build_url(self, tail, variation, base_url=OMA_BASE_URL):

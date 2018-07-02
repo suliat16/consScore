@@ -89,6 +89,25 @@ class TestCons(unittest.TestCase):
         with self.assertRaises(ImportError):
             requests_mock.requests.get.return_value = None
             self.aggregate.update_OMA_orthoIDs()
+            
+    def test_get_fasta_seq(self):
+        tester = self.lyz.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+                                    MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
+                                    TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
+        self.assertFalse('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester)
+        self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester)
+
+    def test_indv_blk(self):
+         tester = self.lyz.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+                                    MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
+                                    TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
+         self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
+         self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester[0])
+
+    def test_empty_input(self):
+        fs = cons.OrthologFinder("")
+        self.assertEqual(fs.get_orthologs(),'Input sequence is empty!')
+
     
 if __name__ == '__main__':
     unittest.main()
