@@ -17,7 +17,9 @@ class OrthologFinder:
     Queries OMA with a protein sequence or fasta to try and retrieve the
     orthologs of that protein. The ortholog data includes the original
     sequence, which is first in the results, as well as the sequence of the 
-    closest protein match in the database, which is labelled with self.
+    closest protein match in the database, which is labelled with self. Note
+    if the sequence entered is not in fasta format, then the resulting string will
+    start with a sequence not in fasta format, followed by orthologs in fasta format
     """
 
     OMA_BASE_URL = 'https://omabrowser.org'
@@ -126,11 +128,12 @@ class OrthologFinder:
             self.sequence =  self.get_fasta_sequence(fasta=self.fasta)
             if self.has_run:
                 output = self.orthologs
+                return output
             else:
                 self.has_run = True
                 self.retrieve_OMAid()
                 output = self.OMA_to_fasta()
-                output = self.sequence + output
+                output = self.fasta + output
                 return output
         except ImportError:
             output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
