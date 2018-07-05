@@ -9,7 +9,7 @@ Test file for cons
 """
 import unittest
 from requests.models import Response
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import cons
 
 class TestCons(unittest.TestCase):
