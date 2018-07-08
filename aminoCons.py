@@ -7,10 +7,14 @@ Created on Tue Jun 26 09:45:57 2018
 """
 
 from Bio.Align.Applications import TCoffeeCommandline
-from biskit.exe import Executor, RunError
+from biskit.exe import Executor
 from biskit.errors import BiskitError
+import biskit.tools as t
 
 class SequenceError(BiskitError):
+    pass
+
+class Rate4SiteError(Exception):
     pass
 
 class AminoConservation:
@@ -43,7 +47,7 @@ class AminoConservation:
         elif sequences[0].isalpha():
             self.sequences = ">Input Sequence\n"+sequences
         else:
-            raise TypeError("Not a FASTA sequence. Please try again")
+            raise SequenceError("Not a FASTA sequence. Please try again")
             
     #TODO: Convert from fasta string with newlines to fasta file with proper formatting
 
@@ -67,6 +71,57 @@ class Rate4SiteWrapper(Executor):
         """
         """
         # what is a template? Do I need one to call input?
-        super().__init__(name='rate4site', tempdir=1, args=msa, f_in=msa, **params, cwd='/tmp')
+        super().__init__(name='rate4site', tempdir=True, args=msa, f_in=msa, **params, cwd='/tmp')
+    
+    def prepare(self):
+        """
+        """
+        super().prepare()
+        self.dir_out = self.tempdir
+        ##Insert mutated sequence before aligning- make it the reference sequence :)
+        ## If I am feeding the sequence directly into Rate4Site wrapper, create
+        # an alignment
+        # I suppose write a test input file, I GUESS
+        
+    def finish(self):
+        """
+        """
+        super().finish()
+        self.read2matrix()
+
+    def read2matrix(self):
+        """
+        Take the output from rate4site and convert it into a numpy array, mapping
+        each conservation score onto its corresponding amino acid
+        """
+        #TODO: Complete
+        
+        
+    def isfailed(self):
+        """
+        Return True if the external program has finished successfully, False 
+        otherwise
+        """
+        if self.returncode == 0: return False
+        else: return True
+        
+    def fail(self):
+        """
+        Called if external program has failed
+        """
+        s = 'Rate4Site failed. Please check the program output in the '+\
+            'field `output` of this Rate4Site instance, (eg. `print x.output`)!'
+        self.log.add(s)
+        raise Rate4SiteError(s)
+        
+    def cleanup(self):
+        super().cleanup()
+        ## t.tryRemove(self.any_defined_variables)
+        
+        
+        
+        
+        
+        
         
         
