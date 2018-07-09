@@ -9,7 +9,8 @@ Created on Tue Jun 26 09:45:57 2018
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
-import biskit.tools as t
+from numpy import array
+import re
 
 class SequenceError(BiskitError):
     pass
@@ -89,12 +90,40 @@ class Rate4SiteWrapper(Executor):
         super().finish()
         self.read2matrix()
 
-    def read2matrix(self):
+    def get_alpha(self, r4s):
+        """
+        Get the alpha parameter of the conservation scores  
+        Note: This method is especially susceptible to changes in the format of 
+        the output file
+        """
+        with open(r4s, 'r') as f:
+            contents = f.read()
+            splitted = contents.split('\n')
+            parameter = ''
+            for s in splitted:
+                if 'alpha parameter' in s:
+                    parameter = s
+                    break
+                else: continue
+            parameter = self.get_num(parameter)
+            return parameter[0]
+        
+    def get_num(self, string):
+        """
+        Return a list of all the numbers present in a string. 
+        """
+        number = [float(s) for s in string.split() if s.isdigit()]
+        return number
+    
+        ##TODO: This doesnt work- learn how to use regex
+    
+    def read2matrix(self, file):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
         each conservation score onto its corresponding amino acid
         """
         #TODO: Complete
+        
         
         
     def isfailed(self):
