@@ -37,6 +37,18 @@ class test_amino_conservation(unittest.TestCase):
         self.tester.ortholog_checker(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
         self.assertEqual(self.tester.sequences, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
 
+    def test_get_num_good(self):
+        digit = am.rate4site.get_num("Hello, how are all 1234.56 of you today")
+        self.assertEqual(digit[0], 1234.56)
 
+    def test_get_num_multi(self):
+        digit = am.rate4site.get_num("Hello, how are all 1234.56 and 42 of you today")
+        self.assertEqual(digit, [1234.56, 42])
+
+    def test_get_num_none(self):
+        digit = am.rate4site.get_num("Oh, there are none of you today")
+        self.assertEqual(digit, [])
+
+        
 if __name__ == '__main__':
     unittest.main()

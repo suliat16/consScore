@@ -63,7 +63,7 @@ class AminoConservation:
         print(tcoffee_cline)
         tcoffee_cline()
         
-class Rate4SiteWrapper(Executor):
+class rate4site(Executor):
     
     """
     """
@@ -101,22 +101,26 @@ class Rate4SiteWrapper(Executor):
             splitted = contents.split('\n')
             parameter = ''
             for s in splitted:
-                if 'alpha parameter' in s:
+                if re.search('alpha parameter', s):
                     parameter = s
                     break
                 else: continue
-            parameter = self.get_num(parameter)
+            parameter = rate4site.get_num(parameter)
             return parameter[0]
-        
-    def get_num(self, string):
+
+    @staticmethod
+    def get_num(string):
         """
-        Return a list of all the numbers present in a string. 
+        Takes a string and returns the first number in that string, decimal included
+        Args:
+            string(str): The string containing a number
+        Returns:
+            A list of all the numbers contained in that string, as floats 
         """
-        number = [float(s) for s in string.split() if s.isdigit()]
-        return number
-    
-        ##TODO: This doesnt work- learn how to use regex
-    
+        digits = r"[0-9]*\.?[0-9]+"
+        parameter = re.findall(digits, string)
+        return list(map(float, parameter))
+
     def read2matrix(self, file):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
