@@ -10,12 +10,12 @@ import unittest
 import aminoCons as am
 
 class test_amino_conservation(unittest.TestCase):
-    
+
     """
     """
-    
+
     def setUp(self):
-        self.tester = am.AminoConservation()        
+        self.tester = am.AminoConservation()
 
     def test_ortho_chk(self):
         self.tester.ortholog_checker("Hello World")
@@ -26,13 +26,13 @@ class test_amino_conservation(unittest.TestCase):
             self.tester.ortholog_checker("")
         err = cm.exception
         self.assertEqual(str(err), "Empty Sequence entered.")
-        
+
     def test_non_sequence(self):
         with self.assertRaises(am.SequenceError) as sm:
             self.tester.ortholog_checker("003893")
         err = sm.exception
         self.assertEqual(str(err), "Not a FASTA sequence. Please try again")
-        
+
     def  test_ortho_already_fasta(self):
         self.tester.ortholog_checker(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
         self.assertEqual(self.tester.sequences, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
@@ -48,7 +48,8 @@ class test_amino_conservation(unittest.TestCase):
     def test_get_num_none(self):
         digit = am.rate4site.get_num("Oh, there are none of you today")
         self.assertEqual(digit, [])
-
         
+    #TODO: Test get_alpha
+
 if __name__ == '__main__':
     unittest.main()

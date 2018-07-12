@@ -6,11 +6,12 @@ Created on Tue Jun 26 09:45:57 2018
 @author: suliat16
 """
 
+import re
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
 from numpy import array
-import re
+
 
 class SequenceError(BiskitError):
     pass
@@ -27,14 +28,12 @@ class AminoConservation:
         """
         """
         self.sequences = ""
-        
-
 
     def ortholog_checker(self, sequences):
         """
-        Checks to see if input string has a fasta identification line- if not, 
-        supplies a default identification line 
-        
+        Checks to see if input string has a fasta identification line- if not,
+        supplies a default identification line
+
         Args:
             sequences (str): The sequence(s), in fasta format
         Returns:
@@ -44,12 +43,12 @@ class AminoConservation:
         ##Insert mutated sequence before aligning- make it the reference sequence :)
         if sequences.startswith(">"):
             self.sequences = sequences
-        elif not sequences: raise SequenceError("Empty Sequence entered.")
+        elif not sequences:
+            raise SequenceError("Empty Sequence entered.")
         elif sequences[0].isalpha():
             self.sequences = ">Input Sequence\n"+sequences
         else:
             raise SequenceError("Not a FASTA sequence. Please try again")
-            
     #TODO: Convert from fasta string with newlines to fasta file with proper formatting
 
     def build_alignment(self, file):
@@ -57,23 +56,23 @@ class AminoConservation:
         """
         #TODO: Either change the implementation, or call it directly
         tcoffee_cline = None
-        tcoffee_cline = TCoffeeCommandline(infile= file,
+        tcoffee_cline = TCoffeeCommandline(infile=file,
                                            output='fasta_seq',
                                            outfile='aligned.aln')
         print(tcoffee_cline)
         tcoffee_cline()
-        
+
 class rate4site(Executor):
-    
+
     """
     """
-    
+
     def __init__(self, msa, **params):
         """
         """
         # what is a template? Do I need one to call input?
         super().__init__(name='rate4site', tempdir=True, args=msa, f_in=msa, **params, cwd='/tmp')
-    
+
     def prepare(self):
         """
         """
@@ -83,7 +82,7 @@ class rate4site(Executor):
         ## If I am feeding the sequence directly into Rate4Site wrapper, create
         # an alignment
         # I suppose write a test input file, I GUESS
-        
+
     def finish(self):
         """
         """
@@ -92,10 +91,12 @@ class rate4site(Executor):
 
     def get_alpha(self, r4s):
         """
-        Get the alpha parameter of the conservation scores  
-        Note: This method is especially susceptible to changes in the format of 
+        Get the alpha parameter of the conservation scores
+        Note: This method is especially susceptible to changes in the format of
         the output file
         """
+        #TODO: when the reckoning happens, open the r4s file once, call get alpha
+        # and read2matrix- none of this multiple opening nonsense
         with open(r4s, 'r') as f:
             contents = f.read()
             splitted = contents.split('\n')
@@ -115,7 +116,7 @@ class rate4site(Executor):
         Args:
             string(str): The string containing a number
         Returns:
-            A list of all the numbers contained in that string, as floats 
+            A list of all the numbers contained in that string, as floats
         """
         digits = r"[0-9]*\.?[0-9]+"
         parameter = re.findall(digits, string)
@@ -127,17 +128,35 @@ class rate4site(Executor):
         each conservation score onto its corresponding amino acid
         """
         #TODO: Complete
-        
-        
-        
+        with open(file, 'r') as f:
+            contents = f.read()
+            residues = rate4site.extract_resi(contents)
+            return residues[:200]
+
+    @staticmethod
+    def extract_resi(string):
+        """
+        """
+        splitted = string.split('\n')
+        residues = []
+        for s in splitted:
+            if not s.startswith('#'):
+                residues.append(s)
+        residues = list(filter(lambda x: x is not '', residues))
+        return residues
+    
+            
+
     def isfailed(self):
         """
-        Return True if the external program has finished successfully, False 
+        Return True if the external program has finished successfully, False
         otherwise
         """
-        if self.returncode == 0: return False
-        else: return True
-        
+        if self.returncode == 0:
+            return False
+        else:
+            return True
+
     def fail(self):
         """
         Called if external program has failed
@@ -146,15 +165,7 @@ class rate4site(Executor):
             'field `output` of this Rate4Site instance, (eg. `print x.output`)!'
         self.log.add(s)
         raise Rate4SiteError(s)
-        
+
     def cleanup(self):
         super().cleanup()
         ## t.tryRemove(self.any_defined_variables)
-        
-        
-        
-        
-        
-        
-        
-        
