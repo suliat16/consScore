@@ -10,7 +10,7 @@ import re
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
-from numpy import array
+import numpy as np
 
 
 class SequenceError(BiskitError):
@@ -127,11 +127,31 @@ class rate4site(Executor):
         Take the output from rate4site and convert it into a numpy array, mapping
         each conservation score onto its corresponding amino acid
         """
-        #TODO: Complete
+        #TODO: Complete- add booleans for parameters in array
         with open(file, 'r') as f:
             contents = f.read()
             residues = rate4site.extract_resi(contents)
-            return residues[:200]
+            r2mat = np.array([])
+            for r in residues:
+                identity = rate4site.extract(r,'iden')
+                score = rate4site.extract(r, 'scor')
+                resi = np.array([identity, score])
+                r2mat = np.concatenate(r2mat, resi)
+            return r2mat
+
+    @staticmethod
+    def extract(string, parameter):
+        """
+        """
+        splitted = string.split()
+        ret = ""
+        if parameter == 'iden':
+            ret = splitted[1]
+        elif parameter == 'scor':
+            ret = splitted[2]
+        else:
+            raise TypeError("Not an acceptable input parameter")
+        return ret
 
     @staticmethod
     def extract_resi(string):
@@ -143,9 +163,8 @@ class rate4site(Executor):
             if not s.startswith('#'):
                 residues.append(s)
         residues = list(filter(lambda x: x is not '', residues))
-        return residues
-    
-            
+        return residues 
+           
 
     def isfailed(self):
         """
