@@ -87,7 +87,6 @@ class rate4site(Executor):
         """
         """
         super().finish()
-        self.read2matrix()
 
     def get_alpha(self, r4s):
         """
@@ -126,17 +125,24 @@ class rate4site(Executor):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
         each conservation score onto its corresponding amino acid
+        Args:
+            file: The output from the Rate4Site program, version 2.01
+        Returns:
+            An array, where the entry at each index contains information about 
+            the amino acid at that position. Note that the 
         """
         #TODO: Complete- add booleans for parameters in array
         with open(file, 'r') as f:
             contents = f.read()
             residues = rate4site.extract_resi(contents)
-            r2mat = np.array([])
+            r2mat = np.empty([1,2])
             for r in residues:
-                identity = rate4site.extract(r,'iden')
+                identity = rate4site.extract(r,'iden') 
                 score = rate4site.extract(r, 'scor')
                 resi = np.array([identity, score])
-                r2mat = np.concatenate(r2mat, resi)
+                resi = resi.reshape((1,2))
+                r2mat = np.concatenate((r2mat, resi), axis=0)
+            r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
 
     @staticmethod
