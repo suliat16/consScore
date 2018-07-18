@@ -33,7 +33,6 @@ class AminoConservation:
         """
         Checks to see if input string has a fasta identification line- if not,
         supplies a default identification line
-
         Args:
             sequences (str): The sequence(s), in fasta format
         Returns:
@@ -67,27 +66,50 @@ class rate4site(Executor):
     """
     """
 
-    def __init__(self, msa, **params):
+    def __init__(self, msa, *args, **kw):
         """
         """
-        # what is a template? Do I need one to call input?
-        super().__init__(name='rate4site', tempdir=True, args=msa, f_in=msa, **params, cwd='/tmp')
-
-    def prepare(self):
-        """
-        """
-        super().prepare()
-        self.dir_out = self.tempdir
-        ##Insert mutated sequence before aligning- make it the reference sequence :)
-        ## If I am feeding the sequence directly into Rate4Site wrapper, create
-        # an alignment
-        # I suppose write a test input file, I GUESS
+        #Note: This is super inefficient if an alignment is done multiple times,
+        #becuase every time rate4site is called, it wipes the last score analysis.
+        #TODO: implement an r4s name and use it to name different output files.
+        super().__init__(name='rate4site', args='-s %s -o aligned.res'% (msa), tempdir=True,
+                             catch_out=1, **kw, verbose=1, cwd= '/tmp')
+        
+        self.alpha = 0
+        self.score_output = self.cwd+'/aligned.res'
 
     def finish(self):
         """
         """
-        super().finish()
+        super().finish()     
+        self.alpha= self.get_alpha(self.score_output)
+        self.result= self.read2matrix(self.score_output)
 
+    def isfailed(self):
+        """
+        Return True if the external program has finished successfully, False
+        otherwise
+        """
+        return 4
+#        if self.returncode == 0:
+#            return False
+#        else:
+#            return True
+
+    def fail(self):
+        """
+        Called if external program has failed
+        """
+        s = 'Rate4Site failed. Please check the program output in the '+\
+            'field `output` of this Rate4Site instance, (eg. `print x.output`)!'
+        self.log.add(s)
+        raise Rate4SiteError(s)
+
+    def cleanup(self):
+      #  super().cleanup()
+      return 5
+        ## t.tryRemove(self.any_defined_variables)  
+        
     def get_alpha(self, r4s):
         """
         Get the alpha parameter of the conservation scores
@@ -121,7 +143,8 @@ class rate4site(Executor):
         parameter = re.findall(digits, string)
         return list(map(float, parameter))
 
-    def read2matrix(self, file):
+    def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
+                    msa=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
         each conservation score onto its corresponding amino acid
@@ -135,29 +158,56 @@ class rate4site(Executor):
         with open(file, 'r') as f:
             contents = f.read()
             residues = rate4site.extract_resi(contents)
-            r2mat = np.empty([1,2])
+            num = self.count_trues(identity, score, qqint, std, msa)
+            r2mat = np.empty([1,num])
             for r in residues:
-                identity = rate4site.extract(r,'iden') 
-                score = rate4site.extract(r, 'scor')
-                resi = np.array([identity, score])
-                resi = resi.reshape((1,2))
+                resi = np.array([])
+                #TODO: This is a LOT of repeated code- ask how to make it more 
+                #abstract
+                if identity == True:
+                    amino = rate4site.extract(r,1) 
+                    resi=np.append(resi, amino)
+                if score == True:
+                    conse = rate4site.extract(r, 2)
+                    resi=np.append(resi, conse)
+                if qqint == True:
+                    intqq = rate4site.extract(r, 3)
+                    resi=np.append(resi, intqq)
+                if std == True:
+                    stdev = rate4site.extract(r, 4)
+                    resi=np.append(resi, stdev)
+                if msa == True:
+                    align = rate4site.extract(r, 5)
+                    resi=np.append(resi, align)
+                resi = resi.reshape((1,num))
                 r2mat = np.concatenate((r2mat, resi), axis=0)
             r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
+        
+    def count_trues(*args):
+        """
+        Counts the number of arguments that are true
+        """
+        i = 0
+        for a in args:
+            if a is True:  
+                i = i+1
+        return i
 
     @staticmethod
     def extract(string, parameter):
         """
+        Pull the specified word from a string. Words are defined as 
+        Args:
+            string (str): The string from which words will be extracted
+            parameter (int): The index of the desired word in the split string
+        Returns:
+            The word at the specified index. Note that the string is split along
+            spaces, so any group of characters surrounded with spaces on both sides
+            is considered a word. 
         """
         splitted = string.split()
-        ret = ""
-        if parameter == 'iden':
-            ret = splitted[1]
-        elif parameter == 'scor':
-            ret = splitted[2]
-        else:
-            raise TypeError("Not an acceptable input parameter")
-        return ret
+        return splitted[parameter]
 
     @staticmethod
     def extract_resi(string):
@@ -170,27 +220,3 @@ class rate4site(Executor):
                 residues.append(s)
         residues = list(filter(lambda x: x is not '', residues))
         return residues 
-           
-
-    def isfailed(self):
-        """
-        Return True if the external program has finished successfully, False
-        otherwise
-        """
-        if self.returncode == 0:
-            return False
-        else:
-            return True
-
-    def fail(self):
-        """
-        Called if external program has failed
-        """
-        s = 'Rate4Site failed. Please check the program output in the '+\
-            'field `output` of this Rate4Site instance, (eg. `print x.output`)!'
-        self.log.add(s)
-        raise Rate4SiteError(s)
-
-    def cleanup(self):
-        super().cleanup()
-        ## t.tryRemove(self.any_defined_variables)

@@ -50,6 +50,6 @@ class test_amino_conservation(unittest.TestCase):
         self.assertEqual(digit, [])
         
     #TODO: Test get_alpha
-
+    
 if __name__ == '__main__':
     unittest.main()
