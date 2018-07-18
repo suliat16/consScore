@@ -10,8 +10,8 @@ import re
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
+import biskit.tools as t
 import numpy as np
-
 
 class SequenceError(BiskitError):
     pass
@@ -72,8 +72,8 @@ class rate4site(Executor):
         #Note: This is super inefficient if an alignment is done multiple times,
         #becuase every time rate4site is called, it wipes the last score analysis.
         #TODO: implement an r4s name and use it to name different output files.
-        super().__init__(name='rate4site', args='-s %s -o aligned.res'% (msa), tempdir=True,
-                             catch_out=1, **kw, verbose=1, cwd= '/tmp')
+        super().__init__(name='rate4site', args='-s %s -o aligned.res'% (msa),
+                             catch_out=1, **kw, cwd= '/tmp')
         
         self.alpha = 0
         self.score_output = self.cwd+'/aligned.res'
@@ -90,11 +90,10 @@ class rate4site(Executor):
         Return True if the external program has finished successfully, False
         otherwise
         """
-        return 4
-#        if self.returncode == 0:
-#            return False
-#        else:
-#            return True
+        if self.returncode == 0:
+            return False
+        else:
+            return True
 
     def fail(self):
         """
@@ -106,9 +105,11 @@ class rate4site(Executor):
         raise Rate4SiteError(s)
 
     def cleanup(self):
-      #  super().cleanup()
-      return 5
-        ## t.tryRemove(self.any_defined_variables)  
+        super().cleanup()
+        t.tryRemove(self.score_output)
+        t.tryRemove(self.cwd+'/TheTree.txt')
+        t.tryRemove(self.cwd+'/r4s.res')
+        t.tryRemove(self.cwd+'/r4sOrig.res')
         
     def get_alpha(self, r4s):
         """
