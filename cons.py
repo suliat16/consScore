@@ -7,9 +7,10 @@ single letter alphabet sequence is required as input.
 """
 
 import json
-import os
 import requests
 import re
+import os
+from lxml import html
 
 class OrthologFinder:
 
@@ -113,7 +114,7 @@ class OrthologFinder:
 
     def read_resp_OMAfasta(self, response):
         """
-        Takes the  ortholog response, converts it to a string
+        Takes the ortholog response, and returns the fasta string
         """
         self.orthologs = str(response.text)
         return self.orthologs
@@ -199,3 +200,29 @@ class OrthologFinder:
         fstr = list(filter(None, fstr))
         fstr = ['>' + f for f in fstr]
         return fstr
+    
+    def seqnwl_strip(self, string):
+        """
+        Removes the newline characters from within the sequences of the fasta 
+        string
+        Args:
+            string (str): The fasta sequence with excess newline characters
+        Returns: 
+            A fasta string without the excess newline characters- Retains the 
+            newline character at the end of the header line
+        """
+        seqlist = self.indv_block(string)
+        fasta = []
+        for seq in seqlist:
+            newlist = seq.split(os.linesep)
+            header = newlist[0] + os.linesep + newlist [1]
+            newlist.pop(0)
+            newlist.pop(1)
+            newlist.insert(0, header)
+            newstring = ''.join(newlist)
+            fasta.append(newstring)
+        fasta = os.linesep.join(fasta)
+        return fasta
+    
+    
+
