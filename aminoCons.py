@@ -80,6 +80,7 @@ class rate4site(Executor):
 
     def finish(self):
         """
+        Overwrites Executor method. Called when the program is done executing.
         """
         super().finish()     
         self.alpha= self.get_alpha(self.score_output)
@@ -87,7 +88,7 @@ class rate4site(Executor):
 
     def isfailed(self):
         """
-        Return True if the external program has finished successfully, False
+        Overwrites Executor method. Return True if the external program has finished successfully, False
         otherwise
         """
         if self.returncode == 0:
@@ -97,7 +98,7 @@ class rate4site(Executor):
 
     def fail(self):
         """
-        Called if external program has failed
+        Overwrites Executor method. Called if external program has failed
         """
         s = 'Rate4Site failed. Please check the program output in the '+\
             'field `output` of this Rate4Site instance, (eg. `print x.output`)!'
@@ -105,6 +106,9 @@ class rate4site(Executor):
         raise Rate4SiteError(s)
 
     def cleanup(self):
+        """
+        Overwrites Executor method. Cleans up files created during program execution. 
+        """
         super().cleanup()
         t.tryRemove(self.score_output)
         t.tryRemove(self.cwd+'/TheTree.txt')
@@ -148,12 +152,19 @@ class rate4site(Executor):
                     msa=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
-        each conservation score onto its corresponding amino acid
+        each conservation score onto its corresponding amino acid. 
+    
         Args:
             file: The output from the Rate4Site program, version 2.01
         Returns:
             An array, where the entry at each index contains information about 
-            the amino acid at that position. Note that the 
+            the amino acid at that position. 
+            
+        The document is parsed by pulling splitting the text from the output file
+        using newlines as delimiters, and grabbing only the lines that do not start
+        with a # symbol. Whats left are the rows of the table, where each row contains
+        information about an amino acid. The rows are then split up depending on 
+        what information it carries.
         """
         #TODO: Complete- add booleans for parameters in array
         with open(file, 'r') as f:
@@ -198,14 +209,7 @@ class rate4site(Executor):
     @staticmethod
     def extract(string, parameter):
         """
-        Pull the specified word from a string. Words are defined as 
-        Args:
-            string (str): The string from which words will be extracted
-            parameter (int): The index of the desired word in the split string
-        Returns:
-            The word at the specified index. Note that the string is split along
-            spaces, so any group of characters surrounded with spaces on both sides
-            is considered a word. 
+        Pull the specified word from a string. 
         """
         splitted = string.split()
         return splitted[parameter]
@@ -213,6 +217,12 @@ class rate4site(Executor):
     @staticmethod
     def extract_resi(string):
         """
+        Grabs the lines of the table that correspond to amino acid data, and puts
+        them in a list.
+        Args:
+            string(str): The contents of the rate4site file
+        Returns:
+            The rows of the amino acid table as a list of strings.
         """
         splitted = string.split('\n')
         residues = []
