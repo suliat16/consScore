@@ -12,6 +12,7 @@ from biskit.exe import Executor
 from biskit.errors import BiskitError
 import biskit.tools as t
 import numpy as np
+import os
 
 class SequenceError(BiskitError):
     pass
@@ -45,7 +46,7 @@ class AminoConservation:
         elif not sequences:
             raise SequenceError("Empty Sequence entered.")
         elif sequences[0].isalpha():
-            self.sequences = ">Input Sequence\n"+sequences
+            self.sequences = ">Input Sequence"+ os.linesep +sequences
         else:
             raise SequenceError("Not a FASTA sequence. Please try again")
     #TODO: Convert from fasta string with newlines to fasta file with proper formatting
@@ -66,35 +67,51 @@ class rate4site(Executor):
     """
     """
 
-    def __init__(self, msa, *args, **kw):
+    def __init__(self, msa, cwdir=None, *args, **kw):
         """
         """
         #Note: This is super inefficient if an alignment is done multiple times,
         #becuase every time rate4site is called, it wipes the last score analysis.
         #TODO: implement an r4s name and use it to name different output files.
-        super().__init__(name='rate4site', args='-s %s -o aligned.res'% (msa),
-                             catch_out=1, **kw, cwd= '/tmp')
+        aln_file = os.path.basename(msa)
+        self.dir_name = (aln_file.split('.'))[0]
         
+        super().__init__(name='rate4site', args='-s %s -o %s.res'% (msa, self.dir_name),
+                         catch_out=1, **kw, tempdir= self.dir_name + 'score')
         self.alpha = 0
-        self.score_output = self.cwd+'/aligned.res'
+        if not cwdir:
+            self.cwd = os.getcwd() + os.sep + self.dir_name
+        self.score_output = self.cwd + os.sep + '%s.res'%(self.dir_name)
+        self.keep_tempdir = True
+    
+    def prepare(self):
+        """
+        """
+        super().prepare(self)
+        
+    
+    
 
     def finish(self):
         """
         Overwrites Executor method. Called when the program is done executing.
         """
-        super().finish()     
+        super().finish()
         self.alpha= self.get_alpha(self.score_output)
         self.result= self.read2matrix(self.score_output)
+        self.keep_tempdir = True
 
     def isfailed(self):
         """
         Overwrites Executor method. Return True if the external program has finished successfully, False
         otherwise
         """
+        ret = None
         if self.returncode == 0:
-            return False
+            ret = False
         else:
-            return True
+            ret = True
+        return ret
 
     def fail(self):
         """
@@ -107,13 +124,18 @@ class rate4site(Executor):
 
     def cleanup(self):
         """
-        Overwrites Executor method. Cleans up files created during program execution. 
+        Overwrites Executor method. Cleans up files created during program execution.
         """
+        #t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
+        t.tryRemove(self.cwd + os.sep + 'r4s.res')
+        t.tryRemove(self.cwd + os.sep + 'r4sOrig.res')
         super().cleanup()
-        t.tryRemove(self.score_output)
-        t.tryRemove(self.cwd+'/TheTree.txt')
-        t.tryRemove(self.cwd+'/r4s.res')
-        t.tryRemove(self.cwd+'/r4sOrig.res')
+        
+    def close(self):
+        """
+        """
+        t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
+        t.tryRemove( self.tempdir, tree=True )
         
     def get_alpha(self, r4s):
         """
@@ -125,7 +147,7 @@ class rate4site(Executor):
         # and read2matrix- none of this multiple opening nonsense
         with open(r4s, 'r') as f:
             contents = f.read()
-            splitted = contents.split('\n')
+            splitted = contents.split(os.linesep)
             parameter = ''
             for s in splitted:
                 if re.search('alpha parameter', s):
@@ -152,18 +174,18 @@ class rate4site(Executor):
                     msa=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
-        each conservation score onto its corresponding amino acid. 
-    
+        each conservation score onto its corresponding amino acid.
+
         Args:
             file: The output from the Rate4Site program, version 2.01
         Returns:
-            An array, where the entry at each index contains information about 
-            the amino acid at that position. 
-            
+            An array, where the entry at each index contains information about
+            the amino acid at that position.
+
         The document is parsed by pulling splitting the text from the output file
         using newlines as delimiters, and grabbing only the lines that do not start
         with a # symbol. Whats left are the rows of the table, where each row contains
-        information about an amino acid. The rows are then split up depending on 
+        information about an amino acid. The rows are then split up depending on
         what information it carries.
         """
         #TODO: Complete- add booleans for parameters in array
@@ -171,13 +193,13 @@ class rate4site(Executor):
             contents = f.read()
             residues = rate4site.extract_resi(contents)
             num = self.count_trues(identity, score, qqint, std, msa)
-            r2mat = np.empty([1,num])
+            r2mat = np.empty([1, num])
             for r in residues:
                 resi = np.array([])
-                #TODO: This is a LOT of repeated code- ask how to make it more 
+                #TODO: This is a LOT of repeated code- ask how to make it more
                 #abstract
                 if identity == True:
-                    amino = rate4site.extract(r,1) 
+                    amino = rate4site.extract(r, 1)
                     resi=np.append(resi, amino)
                 if score == True:
                     conse = rate4site.extract(r, 2)
@@ -195,21 +217,21 @@ class rate4site(Executor):
                 r2mat = np.concatenate((r2mat, resi), axis=0)
             r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
-        
-    def count_trues(*args):
+
+    def count_trues(self, *args):
         """
         Counts the number of arguments that are true
         """
         i = 0
         for a in args:
-            if a is True:  
+            if a is True:
                 i = i+1
         return i
 
     @staticmethod
     def extract(string, parameter):
         """
-        Pull the specified word from a string. 
+        Pull the specified word from a string.
         """
         splitted = string.split()
         return splitted[parameter]
@@ -224,10 +246,10 @@ class rate4site(Executor):
         Returns:
             The rows of the amino acid table as a list of strings.
         """
-        splitted = string.split('\n')
+        splitted = string.split(os.linesep)
         residues = []
         for s in splitted:
             if not s.startswith('#'):
                 residues.append(s)
         residues = list(filter(lambda x: x is not '', residues))
-        return residues 
+        return residues

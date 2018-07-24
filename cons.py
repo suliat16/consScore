@@ -116,7 +116,8 @@ class OrthologFinder:
         """
         Takes the ortholog response, and returns the fasta string
         """
-        self.orthologs = str(response.text)
+        raw = str(response.text)
+        self.orthologs = self.seqnwl_strip(raw)
         return self.orthologs
 
     def get_orthologs(self):
