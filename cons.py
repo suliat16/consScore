@@ -10,7 +10,6 @@ import json
 import requests
 import re
 import os
-from lxml import html
 
 class OrthologFinder:
 

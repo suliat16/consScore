@@ -6,13 +6,13 @@ Created on Tue Jun 26 09:45:57 2018
 @author: suliat16
 """
 
+import os
 import re
+import numpy as np
+import biskit.tools as t
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
-import biskit.tools as t
-import numpy as np
-import os
 
 class SequenceError(BiskitError):
     pass
@@ -20,91 +20,97 @@ class SequenceError(BiskitError):
 class Rate4SiteError(Exception):
     pass
 
-class AminoConservation:
 
+def ortholog_checker(self, sequences):
     """
+    Checks to see if input string has a fasta identification line- if not,
+    supplies a default identification line
+    Args:
+        sequences (str): The sequence(s), in fasta format
+    Returns:
+        The string, with default identification line, ">Input Sequence\n"
+        added if needed
     """
+    ##Insert mutated sequence before aligning- make it the reference sequence :)
+    if sequences.startswith(">"):
+        self.sequences = sequences
+    elif not sequences:
+        raise SequenceError("Empty Sequence entered.")
+    elif sequences[0].isalpha():
+        self.sequences = ">Input Sequence"+ os.linesep +sequences
+    else:
+        raise SequenceError("Not a FASTA sequence. Please try again")
+#TODO: Convert from fasta string with newlines to fasta file with proper formatting
 
-    def __init__(self):
-        """
-        """
-        self.sequences = ""
-
-    def ortholog_checker(self, sequences):
-        """
-        Checks to see if input string has a fasta identification line- if not,
-        supplies a default identification line
-        Args:
-            sequences (str): The sequence(s), in fasta format
-        Returns:
-            The string, with default identification line, ">Input Sequence\n"
-            added if needed
-        """
-        ##Insert mutated sequence before aligning- make it the reference sequence :)
-        if sequences.startswith(">"):
-            self.sequences = sequences
-        elif not sequences:
-            raise SequenceError("Empty Sequence entered.")
-        elif sequences[0].isalpha():
-            self.sequences = ">Input Sequence"+ os.linesep +sequences
-        else:
-            raise SequenceError("Not a FASTA sequence. Please try again")
-    #TODO: Convert from fasta string with newlines to fasta file with proper formatting
-
-    def build_alignment(self, file):
-        """
-        """
-        #TODO: Either change the implementation, or call it directly
-        tcoffee_cline = None
-        tcoffee_cline = TCoffeeCommandline(infile=file,
-                                           output='fasta_seq',
-                                           outfile='aligned.aln')
-        print(tcoffee_cline)
-        tcoffee_cline()
+def build_alignment(self, file):
+    """
+    Calls the TCoffee program to build an alignment of protein sequences
+    Args:
+        file: The absolute file path to the collection of protein sequences
+    Returns: 
+        
+    """
+    #TODO: Either change the implementation, or call it directly
+    tcoffee_cline = None
+    tcoffee_cline = TCoffeeCommandline(infile=file,
+                                       output='fasta_seq',
+                                       outfile='aligned.aln')
+    tcoffee_cline()
 
 class rate4site(Executor):
 
     """
+    Wraps the Rate4Site program. Calling run() executes the program, which creates
+    a folder containing the rate4site output information and the tree, and returns
+    an array that maps the data onto each amino acid, which by default is the
+    conservation score. 
+    
+    Rate4Site is used here for academic purposes. Citation: 
+    Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of 
+    site-specific rate-inference methods: Bayesian methods are superior.Mol Biol 
+    Evol 21: 1781-1791.
     """
 
     def __init__(self, msa, cwdir=None, *args, **kw):
-        """
-        """
-        #Note: This is super inefficient if an alignment is done multiple times,
-        #becuase every time rate4site is called, it wipes the last score analysis.
-        #TODO: implement an r4s name and use it to name different output files.
+        
         aln_file = os.path.basename(msa)
         self.dir_name = (aln_file.split('.'))[0]
-        
         super().__init__(name='rate4site', args='-s %s -o %s.res'% (msa, self.dir_name),
-                         catch_out=1, **kw, tempdir= self.dir_name + 'score')
+                         catch_out=1, **kw, tempdir=self.dir_name)
         self.alpha = 0
         if not cwdir:
             self.cwd = os.getcwd() + os.sep + self.dir_name
         self.score_output = self.cwd + os.sep + '%s.res'%(self.dir_name)
         self.keep_tempdir = True
-    
-    def prepare(self):
+        self.has_run = False
+
+
+    def run(self):
         """
+        Calls the executor run method if it is a first run, otherwise just calls 
+        the post execution methods on the cached files
         """
-        super().prepare(self)
-        
-    
-    
+        if self.has_run:
+            self.finish()
+            return self.result
+        else:
+            return super().run()
+
 
     def finish(self):
         """
         Overwrites Executor method. Called when the program is done executing.
         """
         super().finish()
-        self.alpha= self.get_alpha(self.score_output)
-        self.result= self.read2matrix(self.score_output)
+        self.alpha = self.get_alpha(self.score_output)
+        self.result = self.read2matrix(self.score_output)
         self.keep_tempdir = True
+        self.has_run = True
 
     def isfailed(self):
         """
-        Overwrites Executor method. Return True if the external program has finished successfully, False
-        otherwise
+        Overwrites Executor method. Return True if the external program has finished 
+        successfully, False otherwise
         """
         ret = None
         if self.returncode == 0:
@@ -130,21 +136,30 @@ class rate4site(Executor):
         t.tryRemove(self.cwd + os.sep + 'r4s.res')
         t.tryRemove(self.cwd + os.sep + 'r4sOrig.res')
         super().cleanup()
-        
+
     def close(self):
         """
+        Deletes the output files of rate4site- the alignment tree and the score
+        sheet. 
         """
         t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
-        t.tryRemove( self.tempdir, tree=True )
-        
+        t.tryRemove(self.tempdir, tree=True)
+        self.has_run = False
+
+    def __del__(self):
+        """
+        Deletes output files for rate4stie. When called by garbage collector it also
+        deletes the rate4site instance
+        """
+        t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
+        t.tryRemove(self.tempdir, tree=True)
+
     def get_alpha(self, r4s):
         """
         Get the alpha parameter of the conservation scores
         Note: This method is especially susceptible to changes in the format of
         the output file
         """
-        #TODO: when the reckoning happens, open the r4s file once, call get alpha
-        # and read2matrix- none of this multiple opening nonsense
         with open(r4s, 'r') as f:
             contents = f.read()
             splitted = contents.split(os.linesep)
@@ -188,7 +203,6 @@ class rate4site(Executor):
         information about an amino acid. The rows are then split up depending on
         what information it carries.
         """
-        #TODO: Complete- add booleans for parameters in array
         with open(file, 'r') as f:
             contents = f.read()
             residues = rate4site.extract_resi(contents)
@@ -200,20 +214,20 @@ class rate4site(Executor):
                 #abstract
                 if identity == True:
                     amino = rate4site.extract(r, 1)
-                    resi=np.append(resi, amino)
+                    resi = np.append(resi, amino)
                 if score == True:
                     conse = rate4site.extract(r, 2)
-                    resi=np.append(resi, conse)
+                    resi = np.append(resi, conse)
                 if qqint == True:
                     intqq = rate4site.extract(r, 3)
-                    resi=np.append(resi, intqq)
+                    resi = np.append(resi, intqq)
                 if std == True:
                     stdev = rate4site.extract(r, 4)
-                    resi=np.append(resi, stdev)
+                    resi = np.append(resi, stdev)
                 if msa == True:
                     align = rate4site.extract(r, 5)
-                    resi=np.append(resi, align)
-                resi = resi.reshape((1,num))
+                    resi = np.append(resi, align)
+                resi = resi.reshape((1, num))
                 r2mat = np.concatenate((r2mat, resi), axis=0)
             r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
