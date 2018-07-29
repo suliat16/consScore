@@ -14,7 +14,8 @@ def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
     with open(file, 'r') as f:
         contents = f.read()
         residues = rate4site.extract_resi(contents)
-        num = self.count_trues(identity, score, qqint, std, msa)
+        l = [identity, score, qqint, std, msa]
+        num = l.count(True)
         r2mat = np.empty([1,num])
         for r in residues:
             resi = np.array([])
