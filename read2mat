@@ -1,5 +1,3 @@
-
-
 def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
                 msa=False):
     """
@@ -40,27 +38,17 @@ def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
             r2mat = np.concatenate((r2mat, resi), axis=0)
         r2mat = np.delete(r2mat, 0, axis=0)
         return r2mat
-
-def count_trues(*args):
-    """
-    Counts the number of arguments that are true
-    """
-    i = 0
-    for a in args:
-        if a is True:  
-            i = i+1
-    return i
-
-@staticmethod
-def extract(string, parameter):
+        
+@classmethod
+def extract(cls, string, parameter):
     """
     Pull the specified word from a string. 
     """
     splitted = string.split()
     return splitted[parameter]
 
-@staticmethod
-def extract_resi(string):
+@classmethod
+def extract_resi(cls, string):
     """
     Grabs the lines of the table that correspond to amino acid data, and puts
     them in a list.
@@ -76,6 +64,7 @@ def extract_resi(string):
             residues.append(s)
     residues = list(filter(lambda x: x is not '', residues))
     return residues
+   
 def get_alpha(self, r4s):
     """
     Get the alpha parameter of the conservation scores
@@ -96,8 +85,8 @@ def get_alpha(self, r4s):
         parameter = rate4site.get_num(parameter)
         return parameter[0]
 
-@staticmethod
-def get_num(string):
+@classmethod
+def get_num(cls, string):
     """
     Takes a string and returns the first number in that string, decimal included
     Args:
