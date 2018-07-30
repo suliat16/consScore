@@ -1,3 +1,7 @@
+import re
+import numpy as np
+from biskit.exe import Executor
+
 class rate4site(Executor):
 
     def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
@@ -21,22 +25,22 @@ class rate4site(Executor):
                 resi = np.array([])
                 #TODO: This is a LOT of repeated code- This method in particular is where I 
                 # am asking for help the most
-                if identity == True:
-                    amino = rate4site.extract(r,1) 
-                    resi=np.append(resi, amino)
-                if score == True:
+                if identity is True:
+                    amino = rate4site.extract(r, 1) 
+                    resi = np.append(resi, amino)
+                if score is True:
                     conse = rate4site.extract(r, 2)
-                    resi=np.append(resi, conse)
-                if qqint == True:
+                    resi = np.append(resi, conse)
+                if qqint is True:
                     intqq = rate4site.extract(r, 3)
-                    resi=np.append(resi, intqq)
-                if std == True:
+                    resi = np.append(resi, intqq)
+                if std is True:
                     stdev = rate4site.extract(r, 4)
-                    resi=np.append(resi, stdev)
-                if msa == True:
+                    resi = np.append(resi, stdev)
+                if msa is True:
                     align = rate4site.extract(r, 5)
-                    resi=np.append(resi, align)
-                resi = resi.reshape((1,num))
+                    resi = np.append(resi, align)
+                resi = resi.reshape((1, num))
                 r2mat = np.concatenate((r2mat, resi), axis=0)
             r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
