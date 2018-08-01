@@ -1,9 +1,9 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 """
 Intakes a sequence in protein single letter alphabet, and returns the orthologs
 of the closest protein to that sequence. Either a string in fasta format, or the
-single letter alphabet sequence is required as input. 
+single letter alphabet sequence is required as input.
 """
 
 import json
@@ -16,7 +16,7 @@ class OrthologFinder:
     """
     Queries OMA with a protein sequence or fasta to try and retrieve the
     orthologs of that protein. The ortholog data includes the original
-    sequence, which is first in the results, as well as the sequence of the 
+    sequence, which is first in the results, as well as the sequence of the
     closest protein match in the database, which is labelled with self. Note
     if the sequence entered is not in fasta format, then the resulting string will
     start with a sequence not in fasta format, followed by orthologs in fasta format
@@ -34,8 +34,8 @@ class OrthologFinder:
         self.orthologs = ""
         self.has_run = False
         self.save_status = 0
-    
- 
+
+
 
     def retrieve_OMAid(self):
         """
@@ -126,7 +126,7 @@ class OrthologFinder:
         ##Can I put the return statements in a finally block?
         try:
             output = None
-            self.sequence =  self.get_fasta_sequence(fasta=self.fasta)
+            self.sequence = self.get_fasta_sequence(fasta=self.fasta)
             if self.has_run:
                 output = self.orthologs
                 return output
@@ -142,7 +142,7 @@ class OrthologFinder:
         except TimeoutError:
             output = 'The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status)
             return output
-        except IndexError: 
+        except IndexError:
             output = "Input sequence is empty!"
             return output
 
@@ -159,63 +159,63 @@ class OrthologFinder:
         url = base_url + tail
         url = url.format(*variation)
         return url
-    
+
     def get_fasta_sequence(self, fasta):
         """
         Given a fasta file, return the sequence at the given index
-        
+
         Args:
             index(int): For a fasta file with multiple proteins, is the zero
                 indexed position of the desired protein within the file
-        
-        Returns: 
+
+        Returns:
             The sequence of the specified protein, as a single string, with newline
             characters removed.
         """
-        fstr= self.indv_block(st=fasta)
-        fstr=fstr[0]
-        fstr= fstr.splitlines()
+        fstr = self.indv_block(st=fasta)
+        fstr = fstr[0]
+        fstr = fstr.splitlines()
         for f in fstr:
             if f.startswith('>'):
                 fstr.remove(f)
-        fstr= "".join(fstr)
+        fstr = "".join(fstr)
         return fstr
-    
+
     def indv_block(self, st=""):
         """
         Return the header line and the sequence of individual constructs in a file
-        
+
         Args:
-            st(str): The text contained in a fasta file, as a string. Consists of a 
-                header, which is inititated by > and ends with a newline. Subsequent 
+            st(str): The text contained in a fasta file, as a string. Consists of a
+                header, which is inititated by > and ends with a newline. Subsequent
                 lines are sequence data, until another > is found.
-            
-        Returns: 
+
+        Returns:
             A list of strings, where each string is the construct header and sequence,
             as a single string. For example, a file containing 4 proteins would
             a list of 4 strings. Each string begins with >, and contains both the
-            headers and the newline characters. 
+            headers and the newline characters.
         """
-        fstr=re.split('>',st)
+        fstr = re.split('>', st)
         fstr = list(filter(None, fstr))
         fstr = ['>' + f for f in fstr]
         return fstr
-    
+
     def seqnwl_strip(self, string):
         """
-        Removes the newline characters from within the sequences of the fasta 
+        Removes the newline characters from within the sequences of the fasta
         string
         Args:
             string (str): The fasta sequence with excess newline characters
-        Returns: 
-            A fasta string without the excess newline characters- Retains the 
+        Returns:
+            A fasta string without the excess newline characters- Retains the
             newline character at the end of the header line
         """
         seqlist = self.indv_block(string)
         fasta = []
         for seq in seqlist:
             newlist = seq.split(os.linesep)
-            header = newlist[0] + os.linesep + newlist [1]
+            header = newlist[0] + os.linesep + newlist[1]
             newlist.pop(0)
             newlist.pop(1)
             newlist.insert(0, header)
@@ -223,6 +223,3 @@ class OrthologFinder:
             fasta.append(newstring)
         fasta = os.linesep.join(fasta)
         return fasta
-    
-    
-

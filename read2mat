@@ -1,4 +1,8 @@
+import re
+import numpy as np
+from biskit.exe import Executor
 
+class rate4site(Executor):
 
     def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
                     msa=False):
@@ -11,56 +15,46 @@
             An array, where the entry at each index contains information about 
             the amino acid at that position. Note that the 
         """
-        #TODO: Complete- add booleans for parameters in array
         with open(file, 'r') as f:
             contents = f.read()
             residues = rate4site.extract_resi(contents)
-            num = self.count_trues(identity, score, qqint, std, msa)
+            l = [identity, score, qqint, std, msa]
+            num = l.count(True)
             r2mat = np.empty([1,num])
             for r in residues:
                 resi = np.array([])
-                #TODO: This is a LOT of repeated code- ask how to make it more 
-                #abstract
-                if identity == True:
-                    amino = rate4site.extract(r,1) 
-                    resi=np.append(resi, amino)
-                if score == True:
+                #TODO: This is a LOT of repeated code- This method in particular is where I 
+                # am asking for help the most
+                if identity is True:
+                    amino = rate4site.extract(r, 1) 
+                    resi = np.append(resi, amino)
+                if score is True:
                     conse = rate4site.extract(r, 2)
-                    resi=np.append(resi, conse)
-                if qqint == True:
+                    resi = np.append(resi, conse)
+                if qqint is True:
                     intqq = rate4site.extract(r, 3)
-                    resi=np.append(resi, intqq)
-                if std == True:
+                    resi = np.append(resi, intqq)
+                if std is True:
                     stdev = rate4site.extract(r, 4)
-                    resi=np.append(resi, stdev)
-                if msa == True:
+                    resi = np.append(resi, stdev)
+                if msa is True:
                     align = rate4site.extract(r, 5)
-                    resi=np.append(resi, align)
-                resi = resi.reshape((1,num))
+                    resi = np.append(resi, align)
+                resi = resi.reshape((1, num))
                 r2mat = np.concatenate((r2mat, resi), axis=0)
             r2mat = np.delete(r2mat, 0, axis=0)
             return r2mat
-        
-    def count_trues(*args):
-        """
-        Counts the number of arguments that are true
-        """
-        i = 0
-        for a in args:
-            if a is True:  
-                i = i+1
-        return i
 
-    @staticmethod
-    def extract(string, parameter):
+    @classmethod
+    def extract(cls, string, parameter):
         """
         Pull the specified word from a string. 
         """
         splitted = string.split()
         return splitted[parameter]
 
-    @staticmethod
-    def extract_resi(string):
+    @classmethod
+    def extract_resi(cls, string):
         """
         Grabs the lines of the table that correspond to amino acid data, and puts
         them in a list.
@@ -76,6 +70,7 @@
                 residues.append(s)
         residues = list(filter(lambda x: x is not '', residues))
         return residues
+
     def get_alpha(self, r4s):
         """
         Get the alpha parameter of the conservation scores
@@ -96,8 +91,8 @@
             parameter = rate4site.get_num(parameter)
             return parameter[0]
 
-    @staticmethod
-    def get_num(string):
+    @classmethod
+    def get_num(cls, string):
         """
         Takes a string and returns the first number in that string, decimal included
         Args:
@@ -108,3 +103,4 @@
         digits = r"[0-9]*\.?[0-9]+"
         parameter = re.findall(digits, string)
         return list(map(float, parameter))
+
