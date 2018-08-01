@@ -13,6 +13,7 @@ import biskit.tools as t
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
+import tempfile
 
 class SequenceError(BiskitError):
     pass
@@ -21,7 +22,7 @@ class Rate4SiteError(Exception):
     pass
 
 
-def ortholog_checker(self, sequences):
+def ortholog_checker(sequences):
     """
     Checks to see if input string has a fasta identification line- if not,
     supplies a default identification line
@@ -33,46 +34,50 @@ def ortholog_checker(self, sequences):
     """
     ##Insert mutated sequence before aligning- make it the reference sequence :)
     if sequences.startswith(">"):
-        self.sequences = sequences
+        seq = sequences
     elif not sequences:
         raise SequenceError("Empty Sequence entered.")
     elif sequences[0].isalpha():
-        self.sequences = ">Input Sequence"+ os.linesep +sequences
+        seq = ">Input Sequence"+ os.linesep +sequences
     else:
         raise SequenceError("Not a FASTA sequence. Please try again")
+    return seq
 #TODO: Convert from fasta string with newlines to fasta file with proper formatting
 
-def build_alignment(self, file):
+def build_alignment(file):
     """
     Calls the TCoffee program to build an alignment of protein sequences
     Args:
         file: The absolute file path to the collection of protein sequences
-    Returns: 
-        
-    """
-    #TODO: Either change the implementation, or call it directly
-    tcoffee_cline = None
-    tcoffee_cline = TCoffeeCommandline(infile=file,
-                                       output='fasta_seq',
-                                       outfile='aligned.aln')
-    tcoffee_cline()
+    Returns:
 
-class rate4site(Executor):
+    """
+    tcoffee_cline = TCoffeeCommandline(infile=file,
+                                       output='clustalw',
+                                       outfile='%s' %(os.path.basename(file)))
+    directory = tempfile.mkdtemp()
+    os.chdir(directory)
+    tcoffee_cline()
+    return directory
+    #TODO: cleanup method has to change back the working directory
+    
+
+class Rate4site(Executor):
 
     """
     Wraps the Rate4Site program. Calling run() executes the program, which creates
     a folder containing the rate4site output information and the tree, and returns
     an array that maps the data onto each amino acid, which by default is the
-    conservation score. 
-    
-    Rate4Site is used here for academic purposes. Citation: 
-    Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of 
-    site-specific rate-inference methods: Bayesian methods are superior.Mol Biol 
+    conservation score.
+
+    Rate4Site is used for academic purposes. Citation:
+    Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of
+    site-specific rate-inference methods: Bayesian methods are superior.Mol Biol
     Evol 21: 1781-1791.
     """
 
-    def __init__(self, msa, cwdir=None, *args, **kw):
-        
+    def __init__(self, msa, *args, cwdir=None, **kw):
+
         aln_file = os.path.basename(msa)
         self.dir_name = (aln_file.split('.'))[0]
         super().__init__(name='rate4site', args='-s %s -o %s.res'% (msa, self.dir_name),
@@ -87,7 +92,7 @@ class rate4site(Executor):
 
     def run(self):
         """
-        Calls the executor run method if it is a first run, otherwise just calls 
+        Calls the executor run method if it is a first run, otherwise just calls
         the post execution methods on the cached files
         """
         if self.has_run:
@@ -109,7 +114,7 @@ class rate4site(Executor):
 
     def isfailed(self):
         """
-        Overwrites Executor method. Return True if the external program has finished 
+        Overwrites Executor method. Return True if the external program has finished
         successfully, False otherwise
         """
         ret = None
@@ -140,7 +145,7 @@ class rate4site(Executor):
     def close(self):
         """
         Deletes the output files of rate4site- the alignment tree and the score
-        sheet. 
+        sheet.
         """
         t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
         t.tryRemove(self.tempdir, tree=True)
@@ -157,23 +162,32 @@ class rate4site(Executor):
     def get_alpha(self, r4s):
         """
         Get the alpha parameter of the conservation scores
+        Args:
+            r4s: The absolute file path to the alignment file
+        Returns: the alpha parameter of the conservation score.
         Note: This method is especially susceptible to changes in the format of
         the output file
         """
-        with open(r4s, 'r') as f:
-            contents = f.read()
-            splitted = contents.split(os.linesep)
-            parameter = ''
-            for s in splitted:
-                if re.search('alpha parameter', s):
-                    parameter = s
-                    break
-                else: continue
-            parameter = rate4site.get_num(parameter)
-            return parameter[0]
+        try:
+            if os.path.isfile(r4s):
+                with open(r4s, 'r') as f:
+                    contents = f.read()
+                    splitted = contents.split(os.linesep)
+                    parameter = ''
+                    for s in splitted:
+                        if re.search('alpha parameter', s):
+                            parameter = s
+                            break
+                        else: continue
+                    parameter = Rate4site.get_num(parameter)
+                    return parameter[0]
+            else: 
+                raise FileNotFoundError
+        except IndexError:
+            raise Rate4SiteError('File format is not supported')
 
-    @staticmethod
-    def get_num(string):
+    @classmethod
+    def get_num(cls, string):
         """
         Takes a string and returns the first number in that string, decimal included
         Args:
@@ -185,7 +199,8 @@ class rate4site(Executor):
         parameter = re.findall(digits, string)
         return list(map(float, parameter))
 
-    def read2matrix(self, file, identity=True, score=True, qqint=False, std=False,
+    @classmethod
+    def read2matrix(cls, file, identity=True, score=True, qqint=False, std=False,
                     msa=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
@@ -203,55 +218,49 @@ class rate4site(Executor):
         information about an amino acid. The rows are then split up depending on
         what information it carries.
         """
-        with open(file, 'r') as f:
-            contents = f.read()
-            residues = rate4site.extract_resi(contents)
-            num = self.count_trues(identity, score, qqint, std, msa)
-            r2mat = np.empty([1, num])
-            for r in residues:
-                resi = np.array([])
-                #TODO: This is a LOT of repeated code- ask how to make it more
-                #abstract
-                if identity == True:
-                    amino = rate4site.extract(r, 1)
-                    resi = np.append(resi, amino)
-                if score == True:
-                    conse = rate4site.extract(r, 2)
-                    resi = np.append(resi, conse)
-                if qqint == True:
-                    intqq = rate4site.extract(r, 3)
-                    resi = np.append(resi, intqq)
-                if std == True:
-                    stdev = rate4site.extract(r, 4)
-                    resi = np.append(resi, stdev)
-                if msa == True:
-                    align = rate4site.extract(r, 5)
-                    resi = np.append(resi, align)
-                resi = resi.reshape((1, num))
-                r2mat = np.concatenate((r2mat, resi), axis=0)
-            r2mat = np.delete(r2mat, 0, axis=0)
-            return r2mat
+        if os.path.isfile(file):
+            with open(file, 'r') as f:
+                contents = f.read()
+                residues = Rate4site.extract_resi(contents)
+                l = [identity, score, qqint, std, msa]
+                num = l.count(True)
+                r2mat = np.empty([1, num])
+                for r in residues:
+                    resi = np.array([])
+                    #TODO: This is a LOT of repeated code- This method in particular is where I
+                    # am asking for help the most
+                    if identity is True:
+                        amino = Rate4site.extract(r, 1)
+                        resi = np.append(resi, amino)
+                    if score is True:
+                        conse = Rate4site.extract(r, 2)
+                        resi = np.append(resi, conse)
+                    if qqint is True:
+                        intqq = Rate4site.extract(r, 3)
+                        resi = np.append(resi, intqq)
+                    if std is True:
+                        stdev = Rate4site.extract(r, 4)
+                        resi = np.append(resi, stdev)
+                    if msa is True:
+                        align = Rate4site.extract(r, 5)
+                        resi = np.append(resi, align)
+                    resi = resi.reshape((1, num))
+                    r2mat = np.concatenate((r2mat, resi), axis=0)
+                r2mat = np.delete(r2mat, 0, axis=0)
+                return r2mat
+        else:
+            raise FileNotFoundError
 
-    def count_trues(self, *args):
-        """
-        Counts the number of arguments that are true
-        """
-        i = 0
-        for a in args:
-            if a is True:
-                i = i+1
-        return i
-
-    @staticmethod
-    def extract(string, parameter):
+    @classmethod
+    def extract(cls, string, parameter):
         """
         Pull the specified word from a string.
         """
         splitted = string.split()
         return splitted[parameter]
 
-    @staticmethod
-    def extract_resi(string):
+    @classmethod
+    def extract_resi(cls, string):
         """
         Grabs the lines of the table that correspond to amino acid data, and puts
         them in a list.
