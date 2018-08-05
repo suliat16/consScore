@@ -18,7 +18,7 @@ import tempfile
 class SequenceError(BiskitError):
     pass
 
-class Rate4SiteError(Exception):
+class Rate4SiteError(BiskitError):
     pass
 
 
@@ -62,7 +62,7 @@ def build_alignment(file):
     #TODO: cleanup method has to change back the working directory
     
 
-class Rate4site(Executor):
+class Rate4Site(Executor):
 
     """
     Wraps the Rate4Site program. Calling run() executes the program, which creates
@@ -79,13 +79,15 @@ class Rate4site(Executor):
     def __init__(self, msa, *args, cwdir=None, **kw):
 
         aln_file = os.path.basename(msa)
-        self.dir_name = (aln_file.split('.'))[0]
+        self.dir_name = aln_file.split('.')[0]
         super().__init__(name='rate4site', args='-s %s -o %s.res'% (msa, self.dir_name),
                          catch_out=1, **kw, tempdir=self.dir_name)
         self.alpha = 0
         if not cwdir:
             self.cwd = os.getcwd() + os.sep + self.dir_name
-        self.score_output = self.cwd + os.sep + '%s.res'%(self.dir_name)
+        else:
+            self.cwd = cwdir
+        self.score_output = self.cwd + os.sep + '%s.res'% self.dir_name
         self.keep_tempdir = True
         self.has_run = False
 
@@ -159,7 +161,8 @@ class Rate4site(Executor):
         t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
         t.tryRemove(self.tempdir, tree=True)
 
-    def get_alpha(self, r4s):
+    @classmethod
+    def get_alpha(cls, r4s):
         """
         Get the alpha parameter of the conservation scores
         Args:
@@ -179,7 +182,7 @@ class Rate4site(Executor):
                             parameter = s
                             break
                         else: continue
-                    parameter = Rate4site.get_num(parameter)
+                    parameter = Rate4Site.get_num(parameter)
                     return parameter[0]
             else: 
                 raise FileNotFoundError
@@ -221,7 +224,7 @@ class Rate4site(Executor):
         if os.path.isfile(file):
             with open(file, 'r') as f:
                 contents = f.read()
-                residues = Rate4site.extract_resi(contents)
+                residues = Rate4Site.extract_resi(contents)
                 l = [identity, score, qqint, std, msa]
                 num = l.count(True)
                 r2mat = np.empty([1, num])
@@ -230,19 +233,19 @@ class Rate4site(Executor):
                     #TODO: This is a LOT of repeated code- This method in particular is where I
                     # am asking for help the most
                     if identity is True:
-                        amino = Rate4site.extract(r, 1)
+                        amino = Rate4Site.extract(r, 1)
                         resi = np.append(resi, amino)
                     if score is True:
-                        conse = Rate4site.extract(r, 2)
+                        conse = Rate4Site.extract(r, 2)
                         resi = np.append(resi, conse)
                     if qqint is True:
-                        intqq = Rate4site.extract(r, 3)
+                        intqq = Rate4Site.extract(r, 3)
                         resi = np.append(resi, intqq)
                     if std is True:
-                        stdev = Rate4site.extract(r, 4)
+                        stdev = Rate4Site.extract(r, 4)
                         resi = np.append(resi, stdev)
                     if msa is True:
-                        align = Rate4site.extract(r, 5)
+                        align = Rate4Site.extract(r, 5)
                         resi = np.append(resi, align)
                     resi = resi.reshape((1, num))
                     r2mat = np.concatenate((r2mat, resi), axis=0)

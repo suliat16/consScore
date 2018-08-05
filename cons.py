@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+# -*- coding: utf-8 -*-
 """
 Intakes a sequence in protein single letter alphabet, and returns the orthologs
 of the closest protein to that sequence. Either a string in fasta format, or the
@@ -34,8 +34,6 @@ class OrthologFinder:
         self.orthologs = ""
         self.has_run = False
         self.save_status = 0
-
-
 
     def retrieve_OMAid(self):
         """
