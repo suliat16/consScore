@@ -8,41 +8,19 @@ Created on Tue Jun 26 09:45:57 2018
 
 import os
 import re
+import tempfile
+import warnings
 import numpy as np
 import biskit.tools as t
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor
 from biskit.errors import BiskitError
-import tempfile
 
 class SequenceError(BiskitError):
     pass
 
 class Rate4SiteError(BiskitError):
     pass
-
-
-def ortholog_checker(sequences):
-    """
-    Checks to see if input string has a fasta identification line- if not,
-    supplies a default identification line
-    Args:
-        sequences (str): The sequence(s), in fasta format
-    Returns:
-        The string, with default identification line, ">Input Sequence\n"
-        added if needed
-    """
-    ##Insert mutated sequence before aligning- make it the reference sequence :)
-    if sequences.startswith(">"):
-        seq = sequences
-    elif not sequences:
-        raise SequenceError("Empty Sequence entered.")
-    elif sequences[0].isalpha():
-        seq = ">Input Sequence"+ os.linesep +sequences
-    else:
-        raise SequenceError("Not a FASTA sequence. Please try again")
-    return seq
-#TODO: Convert from fasta string with newlines to fasta file with proper formatting
 
 def build_alignment(file):
     """
@@ -166,28 +144,27 @@ class Rate4Site(Executor):
         """
         Get the alpha parameter of the conservation scores
         Args:
-            r4s: The absolute file path to the alignment file
-        Returns: the alpha parameter of the conservation score.
-        Note: This method is especially susceptible to changes in the format of
-        the output file
+            r4s (file): The absolute file path to the alignment file
+        Returns:
+            The alpha parameter of the conservation score.
         """
         try:
             if os.path.isfile(r4s):
                 with open(r4s, 'r') as f:
                     contents = f.read()
-                    splitted = contents.split(os.linesep)
-                    parameter = ''
-                    for s in splitted:
-                        if re.search('alpha parameter', s):
-                            parameter = s
-                            break
-                        else: continue
-                    parameter = Rate4Site.get_num(parameter)
-                    return parameter[0]
+                splitted = contents.split(os.linesep)
+                for s in splitted:
+                    if re.search('alpha parameter', s):
+                        parameter = s
+                        parameter = Rate4Site.get_num(parameter)
+                        return parameter[0]
             else: 
                 raise FileNotFoundError
         except IndexError:
             raise Rate4SiteError('File format is not supported')
+        finally:
+            warnings.warn("This method is especially susceptible to changes in the format of \
+            the output file", Warning)
 
     @classmethod
     def get_num(cls, string):
@@ -198,12 +175,12 @@ class Rate4Site(Executor):
         Returns:
             A list of all the numbers contained in that string, as floats
         """
-        digits = r"[0-9]*\.?[0-9]+"
+        digits = r"-?[0-9]*\.?[0-9]+"
         parameter = re.findall(digits, string)
         return list(map(float, parameter))
 
     @classmethod
-    def read2matrix(cls, file, identity=True, score=True, qqint=False, std=False,
+    def read2matrix(cls, r4s, identity=True, score=True, qqint=False, std=False,
                     msa=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
@@ -221,46 +198,40 @@ class Rate4Site(Executor):
         information about an amino acid. The rows are then split up depending on
         what information it carries.
         """
-        if os.path.isfile(file):
-            with open(file, 'r') as f:
-                contents = f.read()
+        try:
+            if os.path.isfile(r4s):
+                with open(r4s, 'r') as file:
+                    contents = file.read()
                 residues = Rate4Site.extract_resi(contents)
-                l = [identity, score, qqint, std, msa]
-                num = l.count(True)
-                r2mat = np.empty([1, num])
+                func_args = [identity, score, qqint, std, msa]
+                dimension = func_args.count(True)
+                r2mat = np.empty([1, dimension])
                 for r in residues:
-                    resi = np.array([])
-                    #TODO: This is a LOT of repeated code- This method in particular is where I
-                    # am asking for help the most
-                    if identity is True:
-                        amino = Rate4Site.extract(r, 1)
-                        resi = np.append(resi, amino)
-                    if score is True:
-                        conse = Rate4Site.extract(r, 2)
-                        resi = np.append(resi, conse)
-                    if qqint is True:
-                        intqq = Rate4Site.extract(r, 3)
-                        resi = np.append(resi, intqq)
-                    if std is True:
-                        stdev = Rate4Site.extract(r, 4)
-                        resi = np.append(resi, stdev)
-                    if msa is True:
-                        align = Rate4Site.extract(r, 5)
-                        resi = np.append(resi, align)
-                    resi = resi.reshape((1, num))
-                    r2mat = np.concatenate((r2mat, resi), axis=0)
+                    np_residues = np.array([])
+                    if identity:
+                        amino = r.split()[1]
+                        np_residues = np.append(np_residues, amino)
+                    if score:
+                        conse = r.split()[2]
+                        np_residues = np.append(np_residues, conse)
+                    if qqint:
+                        intqq = r.split("")[3]
+                        np_residues = np.append(np_residues, intqq)
+                    if std:
+                        stdev = r.split()[4]
+                        np_residues = np.append(np_residues, stdev)
+                    if msa:
+                        align = r.split()[5]
+                        np_residues = np.append(np_residues, align)
+                    np_residues = np_residues.reshape((1, dimension))
+                    r2mat = np.concatenate((r2mat, np_residues), axis=0)
                 r2mat = np.delete(r2mat, 0, axis=0)
                 return r2mat
-        else:
-            raise FileNotFoundError
-
-    @classmethod
-    def extract(cls, string, parameter):
-        """
-        Pull the specified word from a string.
-        """
-        splitted = string.split()
-        return splitted[parameter]
+            else:
+                raise FileNotFoundError
+        finally:
+            warnings.warn("This method is especially susceptible to changes in the format of \
+            the output file", Warning)
 
     @classmethod
     def extract_resi(cls, string):
@@ -275,7 +246,8 @@ class Rate4Site(Executor):
         splitted = string.split(os.linesep)
         residues = []
         for s in splitted:
-            if not s.startswith('#'):
+            #Remove comments and empty lines
+            if s is not '' and not s.startswith('#'):
+                #Remove comments
                 residues.append(s)
-        residues = list(filter(lambda x: x is not '', residues))
         return residues

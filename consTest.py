@@ -108,6 +108,25 @@ class TestCons(unittest.TestCase):
         fs = cons.OrthologFinder("")
         self.assertEqual(fs.get_orthologs(),'Input sequence is empty!')
 
-    
+    def test_ortho_chk(self):
+        output = cons.OrthologFinder.header_check("Hello World")
+        self.assertEqual(output, ">Input Sequence\nHello World")
+
+    def test_ortho_empty(self):
+        with self.assertRaises(cons.SequenceError) as cm:
+            cons.OrthologFinder.header_check("")
+        err = cm.exception
+        self.assertEqual(str(err), "Empty Sequence entered.")
+
+    def test_non_sequence(self):
+        with self.assertRaises(cons.SequenceError) as sm:
+            cons.OrthologFinder.header_check("003893")
+        err = sm.exception
+        self.assertEqual(str(err), "Not a FASTA sequence. Please try again")
+
+    def  test_ortho_already_fasta(self):
+        output = cons.OrthologFinder.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
+        self.assertEqual(output, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
+
 if __name__ == '__main__':
     unittest.main()

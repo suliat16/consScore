@@ -10,6 +10,10 @@ import json
 import requests
 import re
 import os
+from biskit.errors import BiskitError
+
+class SequenceError(BiskitError):
+    pass
 
 class OrthologFinder:
 
@@ -46,7 +50,7 @@ class OrthologFinder:
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
-        url = self.build_url(tail='/api/sequence/?query={0}', variation=[self.sequence])
+        url = OrthologFinder.build_url(tail='/api/sequence/?query={0}', variation=[self.sequence])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             self.read_resp_retOMA(response)
@@ -72,7 +76,7 @@ class OrthologFinder:
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
         """
-        url = self.build_url(tail='/api/protein/{0}/orthologs/', variation=[self.id])
+        url = OrthologFinder.build_url(tail='/api/protein/{0}/orthologs/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             self.read_resp_upOMA(response)
@@ -100,22 +104,15 @@ class OrthologFinder:
             dictated by OMA.Note that when the fasta file is parsed,
             the first id is the OMA ID, and the second is the canonical id.
         """
-        url = self.build_url(tail='/oma/vps/{0}/fasta/', variation=[self.id])
+        url = OrthologFinder.build_url(tail='/oma/vps/{0}/fasta/', variation=[self.id])
         response = requests.get(url)
         if response.status_code == 200:
-            return self.read_resp_OMAfasta(response)
+            self.orthologs = str(response.text)
+            return self.orthologs
         else:
             self.save_status = response.status_code
             message = "Status code: {0}".format(self.save_status)
             raise ImportError(message)
-
-    def read_resp_OMAfasta(self, response):
-        """
-        Takes the ortholog response, and returns the fasta string
-        """
-        raw = str(response.text)
-        self.orthologs = self.seqnwl_strip(raw)
-        return self.orthologs
 
     def get_orthologs(self):
         """
@@ -123,8 +120,7 @@ class OrthologFinder:
         """
         ##Can I put the return statements in a finally block?
         try:
-            output = None
-            self.sequence = self.get_fasta_sequence(fasta=self.fasta)
+            self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
             if self.has_run:
                 output = self.orthologs
                 return output
@@ -132,7 +128,8 @@ class OrthologFinder:
                 self.has_run = True
                 self.retrieve_OMAid()
                 output = self.OMA_to_fasta()
-                output = self.fasta + output
+                output = OrthologFinder.seqnwl_strip(self.fasta) + os.linesep + output
+              #  output = self.fasta + output
                 return output
         except ImportError:
             output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
@@ -144,7 +141,8 @@ class OrthologFinder:
             output = "Input sequence is empty!"
             return output
 
-    def build_url(self, tail, variation, base_url=OMA_BASE_URL):
+    @classmethod
+    def build_url(cls, tail, variation, base_url=OMA_BASE_URL):
         """
         Takes the passed parameters and builds a URL to query the OMA database
 
@@ -158,20 +156,22 @@ class OrthologFinder:
         url = url.format(*variation)
         return url
 
-    def get_fasta_sequence(self, fasta):
+    @classmethod
+    def get_fasta_sequence(cls, fasta, index=0):
         """
         Given a fasta file, return the sequence at the given index
 
         Args:
             index(int): For a fasta file with multiple proteins, is the zero
-                indexed position of the desired protein within the file
-
+                indexed position of the desired protein within the file. So
+                for a file containing 5 proteins, and index of 3 would correspond
+                to the 4th protein
         Returns:
             The sequence of the specified protein, as a single string, with newline
             characters removed.
         """
-        fstr = self.indv_block(st=fasta)
-        fstr = fstr[0]
+        fstr = OrthologFinder.indv_block(st=fasta)
+        fstr = fstr[index]
         fstr = fstr.splitlines()
         for f in fstr:
             if f.startswith('>'):
@@ -179,7 +179,8 @@ class OrthologFinder:
         fstr = "".join(fstr)
         return fstr
 
-    def indv_block(self, st=""):
+    @classmethod
+    def indv_block(cls, st):
         """
         Return the header line and the sequence of individual constructs in a file
 
@@ -194,12 +195,15 @@ class OrthologFinder:
             a list of 4 strings. Each string begins with >, and contains both the
             headers and the newline characters.
         """
-        fstr = re.split('>', st)
-        fstr = list(filter(None, fstr))
-        fstr = ['>' + f for f in fstr]
-        return fstr
+        if st.startswith('>'):
+            fstr = re.split('>', st)
+            fstr = list(filter(None, fstr))
+            fstr = ['>' + f for f in fstr]
+            return fstr
+        else: return [st]
 
-    def seqnwl_strip(self, string):
+    @classmethod
+    def seqnwl_strip(cls, string):
         """
         Removes the newline characters from within the sequences of the fasta
         string
@@ -209,15 +213,33 @@ class OrthologFinder:
             A fasta string without the excess newline characters- Retains the
             newline character at the end of the header line
         """
-        seqlist = self.indv_block(string)
-        fasta = []
-        for seq in seqlist:
-            newlist = seq.split(os.linesep)
-            header = newlist[0] + os.linesep + newlist[1]
-            newlist.pop(0)
-            newlist.pop(1)
-            newlist.insert(0, header)
-            newstring = ''.join(newlist)
-            fasta.append(newstring)
-        fasta = os.linesep.join(fasta)
-        return fasta
+        seqhead = OrthologFinder.header_check(string)
+        newlist = seqhead.split(os.linesep)
+        newlist = list(filter(None, newlist))
+        header = newlist[0] + os.linesep + newlist[1]
+        newlist.pop(0)
+        newlist.insert(0, header)
+        newstring = ''.join(newlist)
+        return newstring
+
+    @classmethod
+    def header_check(cls, sequences):
+        """
+        Checks to see if input string has a fasta identification line- if not,
+        supplies a default identification line
+        Args:
+            sequences (str): The sequence(s), in fasta format
+        Returns:
+            The string, with default identification line, ">Input Sequence\n"
+            added if needed
+        """
+        ##Insert mutated sequence before aligning- make it the reference sequence :)
+        if sequences.startswith(">"):
+            seq = sequences
+        elif not sequences:
+            raise SequenceError("Empty Sequence entered.")
+        elif sequences[0].isalpha():
+            seq = ">Input Sequence" + os.linesep + sequences
+        else:
+            raise SequenceError("Not a FASTA sequence. Please try again")
+        return seq
