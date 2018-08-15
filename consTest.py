@@ -82,7 +82,7 @@ class TestCons(unittest.TestCase):
     def test_ofasta_stragg(self, requests_mock):
         requests_mock.requests.get.return_value = None
         with self.assertRaises(ImportError):
-            self.aggregate.OMA_to_fasta()
+            self.aggregate.ortholog_to_fasta()
 
     @patch('requests.get')
     def test_orIDs_stragg(self, requests_mock):

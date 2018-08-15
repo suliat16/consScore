@@ -17,8 +17,15 @@ class test_amino_conservation(unittest.TestCase):
 
     def setUp(self):
         self.filepath = os.getcwd() + os.sep + 'example_data' 
-        self.testscore = am.Rate4Site(self.filepath +os.sep + 'multiFasta.aln')
+        self.testscore = am.Rate4Site(self.filepath + os.sep + 'multiFasta.aln')
         self.rt2mat = self.testscore.run()
+
+    def test_tcof_output(self):
+        test = am.build_alignment(self.filepath + os.sep + 'multiFasta.fasta')
+        self.assertTrue(os.path.isdir(test))
+        with open(test + os.sep + 'multiFasta.aln', 'r') as f:
+            contents = f.read()
+            self.assertIn('AACCGGTT', contents)
 
     def test_get_num_good(self):
         digit = am.Rate4Site.get_num("Hello, how are all 1234.56 of you today")
@@ -35,13 +42,6 @@ class test_amino_conservation(unittest.TestCase):
     def test_get_num_negative(self):
         digit = am.Rate4Site.get_num("Hello, how are all 1234.56 and -42 of you today")
         self.assertEqual(digit, [1234.56, -42])
-    
-    def test_tcof_output(self):
-        test = am.build_alignment(self.filepath + os.sep + 'multiFasta.fasta')
-        self.assertTrue(os.path.isdir(test))
-        with open(test + os.sep + 'multiFasta.fasta', 'r') as f:
-            contents = f.read()
-            self.assertIn('AACCGGTT', contents)
 
     def test_get_alpha_g(self):
         digit = self.testscore.get_alpha(self.filepath + os.sep + 'multiFasta.res')
@@ -71,23 +71,34 @@ class test_amino_conservation(unittest.TestCase):
 
     def test_r2mat_multi(self):
         output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, msa=True)
-        matrix = np.array([['A', '0.6979', '[-1.946, 2.836]', '3/3'],
-                             ['A', '0.6979', '[-1.946, 2.836]', '3/3'],
-                             ['C', '0.7026', '[-1.946, 2.836]', '3/3'],
-                             ['C', '0.7026', '[-1.946, 2.836]', '3/3'],
-                             ['G', '0.1769', '[-2.332, 2.725]', '3/3'],
-                             ['G', '0.1769', '[-2.332, 2.725]', '3/3'],
-                             ['T', '-1.577', '[-3.889,-0.7852]', '3/3'],
-                             ['T', '-1.577', '[-3.889,-0.7852]', '3/3']])
-        print(output)
+        matrix = np.array([['A', '0.6979', '[-1.946, 2.735]', '3/3'],
+                             ['A', '0.6979', '[-1.946, 2.735]', '3/3'],
+                             ['C', '0.7026', '[-1.946, 2.735]', '3/3'],
+                             ['C', '0.7026', '[-1.946, 2.735]', '3/3'],
+                             ['G', '0.1769', '[-2.332, 1.853]', '3/3'],
+                             ['G', '0.1769', '[-2.332, 1.853]', '3/3'],
+                             ['T', '-1.577', '[-3.889, -0.7852]', '3/3'],
+                             ['T', '-1.577', '[-3.889, -0.7852]', '3/3']])
         np.testing.assert_array_equal(output, matrix)
 
     def test_r2mat_score(self):
-        output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, msa=True)
-        print(output)
+        output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=False, qqint=True, msa=True, std=True)
+        matrix = np.array([['A', '[-1.946, 2.735]', '2.836', '3/3'],
+                           ['A', '[-1.946, 2.735]', '2.836', '3/3'],
+                           ['C', '[-1.946, 2.735]', '2.836', '3/3'],
+                           ['C', '[-1.946, 2.735]', '2.836', '3/3'],
+                           ['G', '[-2.332, 1.853]', '2.725', '3/3'],
+                           ['G', '[-2.332, 1.853]', '2.725','3/3'],
+                           ['T', '[-3.889, -0.7852]', '2.309', '3/3'],
+                           ['T', '[-3.889, -0.7852]', '2.309', '3/3']])
+        np.testing.assert_array_equal(output, matrix)
 
+    def test_r4s_close(self):
+        self.testscore.close()
+        self.assertFalse(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.aln'))
+        self.assertFalse(os.path.isdir(os.getcwd() + os.sep + 'multiFasta'))
 
-    #TODO: Test r2mat, please
+        #TODO: Figure out a way to close the example folder created in testing
 
 if __name__ == '__main__':
     unittest.main()

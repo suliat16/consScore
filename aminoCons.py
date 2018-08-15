@@ -8,7 +8,6 @@ Created on Tue Jun 26 09:45:57 2018
 
 import os
 import re
-import tempfile
 import warnings
 import numpy as np
 import biskit.tools as t
@@ -28,15 +27,26 @@ def build_alignment(file):
     Args:
         file: The absolute file path to the collection of protein sequences
     Returns:
+        A string detailing the path to the folder containing the alignment file. The
+        alignment is output in the current working directory.
 
     """
+    filename = os.path.basename(file)
+    filename = filename.split('.')[0]
     tcoffee_cline = TCoffeeCommandline(infile=file,
                                        output='clustalw',
-                                       outfile='%s' %(os.path.basename(file)))
-    directory = tempfile.mkdtemp()
-    os.chdir(directory)
-    tcoffee_cline()
-    return directory
+                                       outfile='%s.aln' %(filename))
+
+    directory = os.getcwd() + os.sep + str(filename)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        os.chdir(directory)
+        tcoffee_cline()
+        return directory
+    else:
+        os.chdir(directory)
+        tcoffee_cline()
+        return directory
     #TODO: cleanup method has to change back the working directory
     
 
@@ -54,7 +64,7 @@ class Rate4Site(Executor):
     Evol 21: 1781-1791.
     """
 
-    def __init__(self, msa, *args, cwdir=None, **kw):
+    def __init__(self, msa, cwdir=None, **kw):
 
         aln_file = os.path.basename(msa)
         self.dir_name = aln_file.split('.')[0]
@@ -128,12 +138,13 @@ class Rate4Site(Executor):
         sheet.
         """
         t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
+        t.tryRemove(self.cwd + os.sep + '%s.res' %(self.dir_name))
         t.tryRemove(self.tempdir, tree=True)
         self.has_run = False
 
     def __del__(self):
         """
-        Deletes output files for rate4stie. When called by garbage collector it also
+        Deletes output files for rate4site. When called by garbage collector it also
         deletes the rate4site instance
         """
         t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
@@ -155,9 +166,9 @@ class Rate4Site(Executor):
                 splitted = contents.split(os.linesep)
                 for s in splitted:
                     if re.search('alpha parameter', s):
-                        parameter = s
-                        parameter = Rate4Site.get_num(parameter)
+                        parameter = Rate4Site.get_num(s)
                         return parameter[0]
+                raise Rate4SiteError('File format is not supported')
             else: 
                 raise FileNotFoundError
         except IndexError:
@@ -187,7 +198,15 @@ class Rate4Site(Executor):
         each conservation score onto its corresponding amino acid.
 
         Args:
-            file: The output from the Rate4Site program, version 2.01
+            r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
+            If the following parameters are true, the resulting array will contain that information, in the
+            order of the arguments
+                identity (boolean): amino acid (Single letter code) at each position
+                score(boolean): The conservation scores. lower value = higher conservation.
+                qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
+                std(boolean): The standard deviation of hte posterior rate distribution
+                msa(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
+                    number of sequences at each position
         Returns:
             An array, where the entry at each index contains information about
             the amino acid at that position.
@@ -207,21 +226,23 @@ class Rate4Site(Executor):
                 dimension = func_args.count(True)
                 r2mat = np.empty([1, dimension])
                 for r in residues:
+                    aa_data = re.split(r'[\]\[\s,]', r)
+                    aa_data = list(filter(lambda x: x is not '', aa_data))
                     np_residues = np.array([])
                     if identity:
-                        amino = r.split()[1]
+                        amino = aa_data[1]
                         np_residues = np.append(np_residues, amino)
                     if score:
-                        conse = r.split()[2]
+                        conse = aa_data[2]
                         np_residues = np.append(np_residues, conse)
                     if qqint:
-                        intqq = r.split("")[3]
+                        intqq = '[{0}, {1}]'.format(aa_data[3] , aa_data[4])
                         np_residues = np.append(np_residues, intqq)
                     if std:
-                        stdev = r.split()[4]
+                        stdev = aa_data[5]
                         np_residues = np.append(np_residues, stdev)
                     if msa:
-                        align = r.split()[5]
+                        align = aa_data[6]
                         np_residues = np.append(np_residues, align)
                     np_residues = np_residues.reshape((1, dimension))
                     r2mat = np.concatenate((r2mat, np_residues), axis=0)

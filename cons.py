@@ -11,6 +11,7 @@ import requests
 import re
 import os
 from biskit.errors import BiskitError
+from requests import exceptions
 
 class SequenceError(BiskitError):
     pass
@@ -37,6 +38,7 @@ class OrthologFinder:
         self.ortholog_ids = []
         self.orthologs = ""
         self.has_run = False
+        self.has_run_hogs = False
         self.save_status = 0
 
     def retrieve_OMAid(self):
@@ -59,12 +61,37 @@ class OrthologFinder:
             raise TimeoutError
         if response.status_code != 200:
             self.save_status = response.status_code
-            raise ImportError("Status code:{0}".format(self.save_status))
+            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
 
     def read_resp_retOMA(self, response):
         response = json.loads(response.content.decode('utf-8'))
         save = response['targets']
         self.id = save[0]['omaid']
+
+    def retrieve_HOGS(self, root=True):
+        """
+        """
+        url = OrthologFinder.build_url(tail='/api/hog/{0}/', variation=[self.id])
+        response = requests.get(url, headers=self.HEADERS)
+        if response.status_code == 200:
+            return self.read_HOGid(response, root)
+        if response.status_code == 504:
+            self.save_status = response.status_code
+            raise TimeoutError
+        if response.status_code != 200:
+            self.save_status = response.status_code
+            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
+
+    def read_HOGid(self, response, root):
+        """
+        """
+        response = json.loads(response.content.decode('utf-8'))
+        if root:
+            level = response[0]['level']
+        else:
+            level = response['alternative_levels']
+        self.hog_level = level
+        return self.hog_level
 
     def update_OMA_orthoIDs(self):
         """
@@ -82,7 +109,7 @@ class OrthologFinder:
             self.read_resp_upOMA(response)
         else:
             self.save_status = response.status_code
-            raise ImportError("Status code:{0}".format(self.save_status))
+            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
 
     def read_resp_upOMA(self, response):
         """
@@ -92,7 +119,7 @@ class OrthologFinder:
         for i in intro:
             self.ortholog_ids.append(i['canonicalid'])
 
-    def OMA_to_fasta(self):
+    def ortholog_to_fasta(self):
         """
         Takes an OMA specific ID and returns a fasta string of the orthologs assciated
         with that protein
@@ -112,7 +139,34 @@ class OrthologFinder:
         else:
             self.save_status = response.status_code
             message = "Status code: {0}".format(self.save_status)
-            raise ImportError(message)
+            raise exceptions.RequestException(message)
+
+    def HOG_to_fasta(self):
+        """
+        """
+        url = OrthologFinder.build_url(tail='/oma/hogs/{0}/{1}/fasta/', variation=[self.id, self.hog_level])
+        response = requests.get(url)
+        if response.status_code == 200:
+            self.HOGs = str(response.text)
+            return self.HOGs
+        else:
+            self.save_status = response.status_code
+            message = "Status code: {0}".format(self.save_status)
+            raise exceptions.RequestException(message)
+
+    def get_HOGs(self):
+        """
+        """
+        self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
+        if self.has_run_hogs:
+            output = self.HOGs
+            return output
+        else:
+            self.retrieve_OMAid()
+            self.retrieve_HOGS()
+            output = self.HOG_to_fasta()
+            self.has_run_hogs = True
+            return output
 
     def get_orthologs(self):
         """
@@ -125,13 +179,13 @@ class OrthologFinder:
                 output = self.orthologs
                 return output
             else:
-                self.has_run = True
                 self.retrieve_OMAid()
-                output = self.OMA_to_fasta()
+                output = self.ortholog_to_fasta()
                 output = OrthologFinder.seqnwl_strip(self.fasta) + os.linesep + output
               #  output = self.fasta + output
+                self.has_run = True
                 return output
-        except ImportError:
+        except exceptions.RequestException:
             output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
             return output
         except TimeoutError:
@@ -186,7 +240,7 @@ class OrthologFinder:
 
         Args:
             st(str): The text contained in a fasta file, as a string. Consists of a
-                header, which is inititated by > and ends with a newline. Subsequent
+                header, which is initiated by > and ends with a newline. Subsequent
                 lines are sequence data, until another > is found.
 
         Returns:
