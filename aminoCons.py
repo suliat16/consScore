@@ -48,6 +48,10 @@ def build_alignment(file):
         tcoffee_cline()
         return directory
     #TODO: cleanup method has to change back the working directory
+
+def aln_cleanup():
+    """
+    """
     
 
 class Rate4Site(Executor):
@@ -147,8 +151,8 @@ class Rate4Site(Executor):
         Deletes output files for rate4site. When called by garbage collector it also
         deletes the rate4site instance
         """
-        t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
-        t.tryRemove(self.tempdir, tree=True)
+        self.close()
+        t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
 
     @classmethod
     def get_alpha(cls, r4s):

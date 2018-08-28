@@ -40,6 +40,7 @@ class OrthologFinder:
         self.has_run = False
         self.has_run_hogs = False
         self.save_status = 0
+        self.hog_level = ""
 
     def retrieve_OMAid(self):
         """
@@ -68,7 +69,7 @@ class OrthologFinder:
         save = response['targets']
         self.id = save[0]['omaid']
 
-    def retrieve_HOGS(self, root=True):
+    def retrieve_HOG_level(self, root=True):
         """
         """
         url = OrthologFinder.build_url(tail='/api/hog/{0}/', variation=[self.id])
@@ -89,11 +90,11 @@ class OrthologFinder:
         if root:
             level = response[0]['level']
         else:
-            level = response['alternative_levels']
+            level = response[0]['alternative_levels']
         self.hog_level = level
         return self.hog_level
 
-    def update_OMA_orthoIDs(self):
+    def update_orthoIDs(self):
         """
         Takes the OMA specific ID of a protein species, and returns a list of the
         canonical IDs of the orthologs of that protein
@@ -106,12 +107,12 @@ class OrthologFinder:
         url = OrthologFinder.build_url(tail='/api/protein/{0}/orthologs/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
-            self.read_resp_upOMA(response)
+            self.read_resp_orthoIDs(response)
         else:
             self.save_status = response.status_code
             raise exceptions.RequestException("Status code:{0}".format(self.save_status))
 
-    def read_resp_upOMA(self, response):
+    def read_resp_orthoIDs(self, response):
         """
         Retrieves the canonical IDs for the orthologs of the protein
         """
@@ -163,7 +164,7 @@ class OrthologFinder:
             return output
         else:
             self.retrieve_OMAid()
-            self.retrieve_HOGS()
+            self.retrieve_HOG_level()
             output = self.HOG_to_fasta()
             self.has_run_hogs = True
             return output
@@ -173,6 +174,8 @@ class OrthologFinder:
         Returns the orthologous proteins to the sequence stored in the object
         """
         ##Can I put the return statements in a finally block?
+        if not self.fasta:
+            raise SequenceError("Input sequence is empty!")
         try:
             self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
             if self.has_run:
@@ -190,9 +193,6 @@ class OrthologFinder:
             return output
         except TimeoutError:
             output = 'The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status)
-            return output
-        except IndexError:
-            output = "Input sequence is empty!"
             return output
 
     @classmethod

@@ -15,10 +15,11 @@ class test_amino_conservation(unittest.TestCase):
     """
     """
 
-    def setUp(self):
-        self.filepath = os.getcwd() + os.sep + 'example_data' 
-        self.testscore = am.Rate4Site(self.filepath + os.sep + 'multiFasta.aln')
-        self.rt2mat = self.testscore.run()
+    @classmethod
+    def setUpClass(cls):
+        cls.filepath = os.getcwd() + os.sep + 'example_data'
+        cls.r4sobject = am.Rate4Site(cls.filepath + os.sep + 'multiFasta.aln')
+        cls.rt2mat = cls.r4sobject.run()
 
     def test_tcof_output(self):
         test = am.build_alignment(self.filepath + os.sep + 'multiFasta.fasta')
@@ -44,21 +45,21 @@ class test_amino_conservation(unittest.TestCase):
         self.assertEqual(digit, [1234.56, -42])
 
     def test_get_alpha_g(self):
-        digit = self.testscore.get_alpha(self.filepath + os.sep + 'multiFasta.res')
+        digit = self.r4sobject.get_alpha(self.filepath + os.sep + 'multiFasta.res')
         self.assertEqual(digit, 2.83688)
     
     def test_get_alpha_nofile(self):
         with self.assertRaises(FileNotFoundError) as cm:
-            self.testscore.get_alpha(self.filepath + os.sep + 'TheTree.txt')
+            self.r4sobject.get_alpha(self.filepath + os.sep + 'TheTree.txt')
 
     def test_getalpha_badfile(self):
         with self.assertRaises(am.Rate4SiteError) as cm:
-            self.testscore.get_alpha(self.filepath + os.sep + 'Fak2Human.fasta')
+            self.r4sobject.get_alpha(self.filepath + os.sep + 'Fak2Human.fasta')
         err = cm.exception
         self.assertEqual(str(err), 'File format is not supported')
 
     def test_r2mat_g(self):
-        output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res')
+        output = self.r4sobject.read2matrix(self.filepath + os.sep + 'multiFasta.res')
         matrix = np.array([['A', '0.6979'],
                           ['A', '0.6979'],
                           ['C', '0.7026'],
@@ -70,7 +71,7 @@ class test_amino_conservation(unittest.TestCase):
         np.testing.assert_array_equal(matrix, output)
 
     def test_r2mat_multi(self):
-        output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, msa=True)
+        output = self.r4sobject.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, msa=True)
         matrix = np.array([['A', '0.6979', '[-1.946, 2.735]', '3/3'],
                              ['A', '0.6979', '[-1.946, 2.735]', '3/3'],
                              ['C', '0.7026', '[-1.946, 2.735]', '3/3'],
@@ -82,7 +83,7 @@ class test_amino_conservation(unittest.TestCase):
         np.testing.assert_array_equal(output, matrix)
 
     def test_r2mat_score(self):
-        output = self.testscore.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=False, qqint=True, msa=True, std=True)
+        output = self.r4sobject.read2matrix(self.filepath + os.sep + 'multiFasta.res', score=False, qqint=True, msa=True, std=True)
         matrix = np.array([['A', '[-1.946, 2.735]', '2.836', '3/3'],
                            ['A', '[-1.946, 2.735]', '2.836', '3/3'],
                            ['C', '[-1.946, 2.735]', '2.836', '3/3'],
@@ -94,11 +95,24 @@ class test_amino_conservation(unittest.TestCase):
         np.testing.assert_array_equal(output, matrix)
 
     def test_r4s_close(self):
-        self.testscore.close()
+        self.r4sobject.close()
         self.assertFalse(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.aln'))
         self.assertFalse(os.path.isdir(os.getcwd() + os.sep + 'multiFasta'))
 
         #TODO: Figure out a way to close the example folder created in testing
 
+    def test_del_garbage(self):
+        """ Tests to see if the files are deleted after the pointer to them is gone
+        """
+        pointer = am.Rate4Site(os.getcwd() + os.sep + 'example_data' + os.sep + 'multiFasta.aln')
+        pointer.run()
+        pointer = 64
+        self.assertFalse(os.path.exists(os.getcwd() + os.sep + 'multiFasta'))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.r4sobject.__del__()
+
 if __name__ == '__main__':
     unittest.main()
+
