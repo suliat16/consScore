@@ -49,11 +49,6 @@ def build_alignment(file):
         return directory
     #TODO: cleanup method has to change back the working directory
 
-def aln_cleanup():
-    """
-    """
-    
-
 class Rate4Site(Executor):
 
     """
