@@ -59,10 +59,10 @@ class OrthologFinder:
             self.read_resp_retOMA(response)
         if response.status_code == 504:
             self.save_status = response.status_code
-            raise TimeoutError
+            raise TimeoutError('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status))
         if response.status_code != 200:
             self.save_status = response.status_code
-            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
     def read_resp_retOMA(self, response):
         response = json.loads(response.content.decode('utf-8'))
@@ -78,10 +78,10 @@ class OrthologFinder:
             return self.read_HOGid(response, root)
         if response.status_code == 504:
             self.save_status = response.status_code
-            raise TimeoutError
+            raise TimeoutError ('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status))
         if response.status_code != 200:
             self.save_status = response.status_code
-            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
     def read_HOGid(self, response, root):
         """
@@ -110,7 +110,7 @@ class OrthologFinder:
             self.read_resp_orthoIDs(response)
         else:
             self.save_status = response.status_code
-            raise exceptions.RequestException("Status code:{0}".format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
     def read_resp_orthoIDs(self, response):
         """
@@ -139,8 +139,7 @@ class OrthologFinder:
             return self.orthologs
         else:
             self.save_status = response.status_code
-            message = "Status code: {0}".format(self.save_status)
-            raise exceptions.RequestException(message)
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
     def HOG_to_fasta(self):
         """
@@ -152,8 +151,7 @@ class OrthologFinder:
             return self.HOGs
         else:
             self.save_status = response.status_code
-            message = "Status code: {0}".format(self.save_status)
-            raise exceptions.RequestException(message)
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
     def get_HOGs(self):
         """
@@ -176,24 +174,15 @@ class OrthologFinder:
         ##Can I put the return statements in a finally block?
         if not self.fasta:
             raise SequenceError("Input sequence is empty!")
-        try:
-            self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
-            if self.has_run:
-                output = self.orthologs
-                return output
-            else:
-                self.retrieve_OMAid()
-                output = self.ortholog_to_fasta()
-                output = OrthologFinder.seqnwl_strip(self.fasta) + os.linesep + output
-              #  output = self.fasta + output
-                self.has_run = True
-                return output
-        except exceptions.RequestException:
-            output = 'There was an issue querying the database. Status code {0}'.format(self.save_status)
-            return output
-        except TimeoutError:
-            output = 'The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status)
-            return output
+        self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
+        if self.has_run:
+            output = self.orthologs
+        else:
+            self.retrieve_OMAid()
+            output = self.ortholog_to_fasta()
+            output = OrthologFinder.seqnwl_strip(self.fasta) + os.linesep + output
+            self.has_run = True
+        return output
 
     @classmethod
     def build_url(cls, tail, variation, base_url=OMA_BASE_URL):

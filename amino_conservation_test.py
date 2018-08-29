@@ -20,11 +20,11 @@ class test_amino_conservation(unittest.TestCase):
         cls.filepath = os.getcwd() + os.sep + 'example_data'
         cls.r4sobject = am.Rate4Site(cls.filepath + os.sep + 'multiFasta.aln')
         cls.rt2mat = cls.r4sobject.run()
+        cls.test = am.build_alignment(cls.filepath + os.sep + 'multiFasta.fasta')
 
     def test_tcof_output(self):
-        test = am.build_alignment(self.filepath + os.sep + 'multiFasta.fasta')
-        self.assertTrue(os.path.isdir(test))
-        with open(test + os.sep + 'multiFasta.aln', 'r') as f:
+        self.assertTrue(os.path.isdir(self.test))
+        with open(self.test + os.sep + 'multiFasta.aln', 'r') as f:
             contents = f.read()
             self.assertIn('AACCGGTT', contents)
 
@@ -96,7 +96,7 @@ class test_amino_conservation(unittest.TestCase):
 
     def test_r4s_close(self):
         self.r4sobject.close()
-        self.assertFalse(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.aln'))
+        self.assertFalse(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.res'))
         self.assertFalse(os.path.isdir(os.getcwd() + os.sep + 'multiFasta'))
 
         #TODO: Figure out a way to close the example folder created in testing
@@ -104,15 +104,21 @@ class test_amino_conservation(unittest.TestCase):
     def test_del_garbage(self):
         """ Tests to see if the files are deleted after the pointer to them is gone
         """
-        pointer = am.Rate4Site(os.getcwd() + os.sep + 'example_data' + os.sep + 'multiFasta.aln')
+        pointer = am.Rate4Site(os.getcwd() + os.sep + 'multiFasta.aln')
         pointer.run()
         pointer = 64
         self.assertFalse(os.path.exists(os.getcwd() + os.sep + 'multiFasta'))
 
+    def test_clean_argument(self):
+        """Tests to see that alignment file and the folder created are deleted
+        after calling clean argument"""
+      #  am.clean_alignment(self.test)
+       # self.assertFalse(os.path.isdir(self.test))
+
     @classmethod
     def tearDownClass(cls):
         cls.r4sobject.__del__()
+        am.clean_alignment(cls.test)
 
 if __name__ == '__main__':
     unittest.main()
-

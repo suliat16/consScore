@@ -73,8 +73,11 @@ class TestCons(unittest.TestCase):
     def test_ologs_stragg(self, requests_mock):
         requests_mock.requests.get.return_value = None
         requests_mock.requests.get.status_code = 400
-        straggFasta = self.aggregate.get_orthologs()
-        self.assertTrue('There was an issue querying the database. Status code' in straggFasta)
+        with self.assertRaises(exceptions.RequestException) as cm:
+            straggFasta = self.aggregate.get_orthologs()
+        #TODO: returns None instead of raising an exception. Deal with it.
+        err = cm.exception
+        self.assertTrue('There was an issue querying the database. Status code' in str(err))
 
     @patch('cons.requests.get')
     def test_ofasta_stragg(self, requests_mock):

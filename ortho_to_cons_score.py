@@ -24,18 +24,31 @@ Bayesian methods are superior. Mol Biol Evol 21: 1781-1791.
 import cons
 import aminoCons
 import argparse
+import os
 
 #Convert command line arguments to variables
 parser = argparse.ArgumentParser()
 parser.add_argument("sequence", help="Input the sequence of the protein of interest")
 parser.add_argument("--hogs", action="store_true", help="When specified, the Hierarchical Orthologous Group (HOGs) of the sequence is returned")
+parser.add_argument("--name", default="Protein_sequence", help="The name of the protein. All files generated will be based on this name")
 args = parser.parse_args()
 
+with open(args.sequence, 'r') as prot_file:
+    prot_seq = prot_file.read()
+
 if args.hogs:
-    seq2ortho = cons.OrthologFinder(args.sequence)
+    seq2ortho = cons.OrthologFinder(prot_seq)
     orthologs = seq2ortho.get_HOGs()
 else:
-    seq2ortho = cons.OrthologFinder(args.sequence)
+    seq2ortho = cons.OrthologFinder(prot_seq)
     orthologs = seq2ortho.get_orthologs()
 
-# alignment =
+print(type(orthologs))
+with open("%s.txt" %(args.name), 'w') as seq_file:
+    seq_file.write(orthologs)
+
+print(os.getcwd() + os.sep + "%s.txt"%(args.name))
+
+alignment = aminoCons.build_alignment(os.getcwd() + os.sep + "%s.txt"%(args.name))
+
+cons_matrix = aminoCons.Rate4Site(alignment)

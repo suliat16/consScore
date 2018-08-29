@@ -49,6 +49,22 @@ def build_alignment(file):
         return directory
     #TODO: cleanup method has to change back the working directory
 
+
+def clean_alignment(directory):
+    """
+    """
+    filename = os.path.basename(directory)
+    filename = filename.split('.')[0]
+
+    file_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(file_dir)
+
+    if len(os.listdir(directory)) == 0:
+        t.tryRemove(directory)
+    else:
+        t.tryRemove(os.getcwd() + os.sep + '%s.aln' %(filename))
+        t.tryRemove(os.getcwd() + os.sep + '%s.dnd' %(filename))
+
 class Rate4Site(Executor):
 
     """
@@ -146,8 +162,18 @@ class Rate4Site(Executor):
         Deletes output files for rate4site. When called by garbage collector it also
         deletes the rate4site instance
         """
+
         self.close()
         t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
+
+
+        #Todo: If the file written to is empty, its deleted. Else, just delete relevant files
+        # file_dir = os.path.dirname(os.path.abspath(__file__))
+        # os.chdir(file_dir)
+        # if len(os.listdir(self.work_dir)) == 0:
+        #     t.tryRemove(self.work_dir + os.sep + self.dir_name, tree=True)
+        # else:
+        #     self.close()
 
     @classmethod
     def get_alpha(cls, r4s):
