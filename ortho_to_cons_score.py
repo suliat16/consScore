@@ -26,11 +26,17 @@ import aminoCons
 import argparse
 import os
 
-#Convert command line arguments to variables
+OLD_DIR = os.getcwd()
+
 parser = argparse.ArgumentParser()
 parser.add_argument("sequence", help="Input the sequence of the protein of interest")
 parser.add_argument("--hogs", action="store_true", help="When specified, the Hierarchical Orthologous Group (HOGs) of the sequence is returned")
 parser.add_argument("--name", default="Protein_sequence", help="The name of the protein. All files generated will be based on this name")
+parser.add_argument("--identity", action="store_true", help="The identity of the amino acid (Single letter code) at each position")
+parser.add_argument("--score", action="store_true", help="The conservation scores. lower value = higher conservation")
+parser.add_argument("--qqint", action="store_true", help="QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles")
+parser.add_argument("--std", action="store_true", help="The standard deviation of the posterior rate distribution")
+parser.add_argument("--gapped", action="store_true", help="MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall number of sequences at each position")
 args = parser.parse_args()
 
 with open(args.sequence, 'r') as prot_file:
@@ -43,12 +49,16 @@ else:
     seq2ortho = cons.OrthologFinder(prot_seq)
     orthologs = seq2ortho.get_orthologs()
 
-print(type(orthologs))
 with open("%s.txt" %(args.name), 'w') as seq_file:
     seq_file.write(orthologs)
 
-print(os.getcwd() + os.sep + "%s.txt"%(args.name))
-
 alignment = aminoCons.build_alignment(os.getcwd() + os.sep + "%s.txt"%(args.name))
 
-cons_matrix = aminoCons.Rate4Site(alignment)
+cons_dict = aminoCons.Rate4Site(msa= (alignment + os.sep+ "%s.aln"%(args.name)), identity=args.identity,
+                                  score=args.score, qqint=args.qqint,std=args.std, gapped=args.gapped)
+cons_dict = cons_dict.run()
+
+
+with open("%s data"%(args.name), 'w') as mat_file:
+    output = str(cons_dict)
+    mat_file.write(output)

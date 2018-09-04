@@ -8,7 +8,6 @@ Created on Sun Jul  1 16:58:25 2018
 import os
 import unittest
 import aminoCons as am
-import numpy as np
 
 class test_amino_conservation(unittest.TestCase):
 
@@ -67,41 +66,39 @@ class test_amino_conservation(unittest.TestCase):
 
     def test_r2mat_g(self):
         output = self.r4sobject.rate2dict(self.filepath + os.sep + 'multiFasta.res')
-        dictionary = {0:('A', '0.6979'),
-                    1:('A', '0.6979'),
-                    2:('C', '0.7026'),
-                    3:('C', '0.7026'),
-                    4:('G', '0.1769'),
-                    5:('G', '0.1769'),
-                    6:('T', '-1.577'),
-                    7:('T', '-1.577')}
-        print(dictionary)
-        print(output)
+        dictionary = {0:('A', 0.6979),
+                    1:('A', 0.6979),
+                    2:('C', 0.7026),
+                    3:('C', 0.7026),
+                    4:('G', 0.1769),
+                    5:('G', 0.1769),
+                    6:('T', -1.577),
+                    7:('T', -1.577)}
         self.assertDictEqual(dictionary, output)
 
     def test_r2mat_multi(self):
         output = self.r4sobject.rate2dict(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, gapped=True)
-        dictionary = {0:('A', '0.6979', '[-1.946, 2.735]', '3/3'),
-                           1:('A', '0.6979', '[-1.946, 2.735]', '3/3'),
-                           2:('C', '0.7026', '[-1.946, 2.735]', '3/3'),
-                           3:('C', '0.7026', '[-1.946, 2.735]', '3/3'),
-                           4:('G', '0.1769', '[-2.332, 1.853]', '3/3'),
-                           5:('G', '0.1769', '[-2.332, 1.853]', '3/3'),
-                           6:('T', '-1.577', '[-3.889, -0.7852]', '3/3'),
-                           7:('T', '-1.577', '[-3.889, -0.7852]', '3/3')}
-        np.testing.assert_array_equal(output, dictionary)
+        dictionary = {0:('A', 0.6979, (-1.946, 2.735), '3/3'),
+                           1:('A', 0.6979, (-1.946, 2.735), '3/3'),
+                           2:('C', 0.7026, (-1.946, 2.735), '3/3'),
+                           3:('C', 0.7026, (-1.946, 2.735), '3/3'),
+                           4:('G', 0.1769, (-2.332, 1.853), '3/3'),
+                           5:('G', 0.1769, (-2.332, 1.853), '3/3'),
+                           6:('T', -1.577, (-3.889, -0.7852), '3/3'),
+                           7:('T', -1.577, (-3.889, -0.7852), '3/3')}
+        self.assertDictEqual(output, dictionary)
 
     def test_r2mat_score(self):
         output = self.r4sobject.rate2dict(self.filepath + os.sep + 'multiFasta.res', score=False, qqint=True, gapped=True, std=True)
-        dictionary = np.array({0:('A', '[-1.946, 2.735]', '2.836', '3/3'),
-                           1:('A', '[-1.946, 2.735]', '2.836', '3/3'),
-                           2:('C', '[-1.946, 2.735]', '2.836', '3/3'),
-                           3:('C', '[-1.946, 2.735]', '2.836', '3/3'),
-                           4:('G', '[-2.332, 1.853]', '2.725', '3/3'),
-                           5:('G', '[-2.332, 1.853]', '2.725', '3/3'),
-                           6:('T', '[-3.889, -0.7852]', '2.309', '3/3'),
-                           7:('T', '[-3.889, -0.7852]', '2.309', '3/3')})
-        np.testing.assert_array_equal(output, dictionary)
+        dictionary = {0:('A', (-1.946, 2.735), 2.836, '3/3'),
+                           1:('A', (-1.946, 2.735), 2.836, '3/3'),
+                           2:('C', (-1.946, 2.735), 2.836, '3/3'),
+                           3:('C', (-1.946, 2.735), 2.836, '3/3'),
+                           4:('G', (-2.332, 1.853), 2.725, '3/3'),
+                           5:('G', (-2.332, 1.853), 2.725, '3/3'),
+                           6:('T', (-3.889, -0.7852), 2.309, '3/3'),
+                           7:('T', (-3.889, -0.7852), 2.309, '3/3')}
+        self.assertDictEqual(output, dictionary)
 
     def test_r4s_close(self):
         self.r4sobject.close()

@@ -37,27 +37,25 @@ def build_alignment(file):
                                        output='clustalw',
                                        outfile='%s.aln' %(filename))
 
-    directory = os.getcwd() + os.sep + str(filename)
+    old_path = os.getcwd()
+    directory = old_path + os.sep + str(filename)
     if not os.path.exists(directory):
         os.makedirs(directory)
         os.chdir(directory)
         tcoffee_cline()
+        os.chdir(old_path)
         return directory
     else:
         os.chdir(directory)
         tcoffee_cline()
+        os.chdir(old_path)
         return directory
-    #TODO: cleanup method has to change back the working directory
-
 
 def clean_alignment(directory):
     """
     """
     filename = os.path.basename(directory)
     filename = filename.split('.')[0]
-
-    file_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(file_dir)
 
     if len(os.listdir(directory)) == 0:
         t.tryRemove(directory)
@@ -92,7 +90,6 @@ class Rate4Site(Executor):
         else:
             self.cwd = cwdir
         self.score_output = self.cwd + os.sep + '%s.res'% self.dir_name
-        self.keep_tempdir = True
         self.has_run = False
         self.cache = cache
 
@@ -122,7 +119,6 @@ class Rate4Site(Executor):
         self.alpha = self.get_alpha(self.score_output)
         self.result = self.rate2dict(self.score_output, identity=self.identity, score=self.score,
                                      qqint=self.qqint, std= self.std, gapped = self.gapped)
-        self.keep_tempdir = True
         self.has_run = True
 
     def isfailed(self):
@@ -150,7 +146,6 @@ class Rate4Site(Executor):
         """
         Overwrites Executor method. Cleans up files created during program execution.
         """
-        #t.tryRemove(self.cwd + os.sep + 'TheTree.txt')
         t.tryRemove(self.cwd + os.sep + 'r4s.res')
         t.tryRemove(self.cwd + os.sep + 'r4sOrig.res')
         super().cleanup()
@@ -259,7 +254,7 @@ class Rate4Site(Executor):
                         conse = float(aa_data[2])
                         r2mat.append(conse)
                     if qqint:
-                        intqq = '[{0}, {1}]'.format(aa_data[3], aa_data[4])
+                        intqq = (float(aa_data[3]), float(aa_data[4]))
                         r2mat.append(intqq)
                     if std:
                         stdev = float(aa_data[5])
