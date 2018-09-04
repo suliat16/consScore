@@ -180,7 +180,7 @@ class OrthologFinder:
         else:
             self.retrieve_OMAid()
             output = self.ortholog_to_fasta()
-            output = OrthologFinder.seqnwl_strip(self.fasta) + os.linesep + output
+            output = OrthologFinder.seqnwl_strip(self.sequence) + os.linesep + output
             self.has_run = True
         return output
 
