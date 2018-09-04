@@ -79,7 +79,8 @@ class Rate4Site(Executor):
     Evol 21: 1781-1791.
     """
 
-    def __init__(self, msa, cwdir=None, **kw):
+    def __init__(self, msa, cwdir=None, cache=True, identity=True, score=True, qqint=False, std=False,
+                    gapped=False, **kw):
 
         aln_file = os.path.basename(msa)
         self.dir_name = aln_file.split('.')[0]
@@ -93,7 +94,13 @@ class Rate4Site(Executor):
         self.score_output = self.cwd + os.sep + '%s.res'% self.dir_name
         self.keep_tempdir = True
         self.has_run = False
+        self.cache = cache
 
+        self.identity = identity
+        self.score= score
+        self.qqint = qqint
+        self.std = std
+        self.gapped = gapped
 
     def run(self):
         """
@@ -113,7 +120,8 @@ class Rate4Site(Executor):
         """
         super().finish()
         self.alpha = self.get_alpha(self.score_output)
-        self.result = self.read2matrix(self.score_output)
+        self.result = self.rate2dict(self.score_output, identity=self.identity, score=self.score,
+                                     qqint=self.qqint, std= self.std, gapped = self.gapped)
         self.keep_tempdir = True
         self.has_run = True
 
@@ -162,18 +170,9 @@ class Rate4Site(Executor):
         Deletes output files for rate4site. When called by garbage collector it also
         deletes the rate4site instance
         """
-
-        self.close()
-        t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
-
-
-        #Todo: If the file written to is empty, its deleted. Else, just delete relevant files
-        # file_dir = os.path.dirname(os.path.abspath(__file__))
-        # os.chdir(file_dir)
-        # if len(os.listdir(self.work_dir)) == 0:
-        #     t.tryRemove(self.work_dir + os.sep + self.dir_name, tree=True)
-        # else:
-        #     self.close()
+        if not self.cache:
+            self.close()
+            t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
 
     @classmethod
     def get_alpha(cls, r4s):
@@ -216,8 +215,8 @@ class Rate4Site(Executor):
         return list(map(float, parameter))
 
     @classmethod
-    def read2matrix(cls, r4s, identity=True, score=True, qqint=False, std=False,
-                    msa=False):
+    def rate2dict(cls, r4s, identity=True, score=True, qqint=False, std=False,
+                  gapped=False):
         """
         Take the output from rate4site and convert it into a numpy array, mapping
         each conservation score onto its corresponding amino acid.
@@ -226,11 +225,11 @@ class Rate4Site(Executor):
             r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
             If the following parameters are true, the resulting array will contain that information, in the
             order of the arguments
-                identity (boolean): amino acid (Single letter code) at each position
+                identity (boolean): The identity of the amino acid (Single letter code) at each position
                 score(boolean): The conservation scores. lower value = higher conservation.
                 qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
                 std(boolean): The standard deviation of hte posterior rate distribution
-                msa(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
+                gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
                     number of sequences at each position
         Returns:
             An array, where the entry at each index contains information about
@@ -247,7 +246,69 @@ class Rate4Site(Executor):
                 with open(r4s, 'r') as file:
                     contents = file.read()
                 residues = Rate4Site.extract_resi(contents)
-                func_args = [identity, score, qqint, std, msa]
+                r2dict = {}
+                i=0
+                for r in residues:
+                    r2mat = []
+                    aa_data = re.split(r'[\]\[\s,]', r)
+                    aa_data = list(filter(lambda x: x is not '', aa_data))
+                    if identity:
+                        amino = aa_data[1]
+                        r2mat.append(amino)
+                    if score:
+                        conse = float(aa_data[2])
+                        r2mat.append(conse)
+                    if qqint:
+                        intqq = '[{0}, {1}]'.format(aa_data[3], aa_data[4])
+                        r2mat.append(intqq)
+                    if std:
+                        stdev = float(aa_data[5])
+                        r2mat.append(stdev)
+                    if gapped:
+                        align = aa_data[6]
+                        r2mat.append(align)
+                    r2mat = tuple(r2mat)
+                    r2dict[i] = r2mat
+                    i+=1
+                return r2dict
+            else:
+                raise FileNotFoundError
+        finally:
+            warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
+
+    @classmethod
+    def read2matrix(cls, r4s, identity=True, score=True, qqint=False, std=False,
+                    gapped=False):
+        """
+        Take the output from rate4site and convert it into a numpy array, mapping
+        each conservation score onto its corresponding amino acid.
+
+        Args:
+            r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
+            If the following parameters are true, the resulting array will contain that information, in the
+            order of the arguments
+                identity (boolean): The identity of the amino acid (Single letter code) at each position
+                score(boolean): The conservation scores. lower value = higher conservation.
+                qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
+                std(boolean): The standard deviation of hte posterior rate distribution
+                gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
+                    number of sequences at each position
+        Returns:
+            An array, where the entry at each index contains information about
+            the amino acid at that position.
+
+        The document is parsed by pulling splitting the text from the output file
+        using newlines as delimiters, and grabbing only the lines that do not start
+        with a # symbol. Whats left are the rows of the table, where each row contains
+        information about an amino acid. The rows are then split up depending on
+        what information it carries.
+        """
+        try:
+            if os.path.isfile(r4s):
+                with open(r4s, 'r') as file:
+                    contents = file.read()
+                residues = Rate4Site.extract_resi(contents)
+                func_args = [identity, score, qqint, std, gapped]
                 dimension = func_args.count(True)
                 r2mat = np.empty([1, dimension])
                 for r in residues:
@@ -266,7 +327,7 @@ class Rate4Site(Executor):
                     if std:
                         stdev = aa_data[5]
                         np_residues = np.append(np_residues, stdev)
-                    if msa:
+                    if gapped:
                         align = aa_data[6]
                         np_residues = np.append(np_residues, align)
                     np_residues = np_residues.reshape((1, dimension))
@@ -276,8 +337,7 @@ class Rate4Site(Executor):
             else:
                 raise FileNotFoundError
         finally:
-            warnings.warn("This method is especially susceptible to changes in the format of \
-            the output file", Warning)
+            warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
 
     @classmethod
     def extract_resi(cls, string):
