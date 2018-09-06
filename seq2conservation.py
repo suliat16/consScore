@@ -82,3 +82,12 @@ class ConservationPipe():
         self.cons.close()
         aminoCons.clean_alignment(msa)
         os.chdir(self.old_path)
+
+    def pipe(self):
+        """
+        """
+        orth = self.call_orthologs()
+        aln = self.call_alignment(orth)
+        r4s = self.call_rate4site(aln)
+        if not self.cache:
+            self.cleanup(aln)

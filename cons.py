@@ -153,6 +153,19 @@ class OrthologFinder:
             self.save_status = response.status_code
             raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
+    def get_msa(self):
+        """
+        """
+        url = OrthologFinder.build_url(tail='/oma/hogs/{0}/{1}/msa/', variation = [self.id, self.hog_level])
+        response = requests.get(url)
+        if response.status_code == 200:
+            self.msa = str(response.text)
+            return self.msa
+        else:
+            self.save_status = response.status_code
+            raise exceptions.RequestException(
+                'There was an issue querying the database. Status code {0}'.format(self.save_status))
+
     def get_HOGs(self):
         """
         """
