@@ -26,6 +26,7 @@ class OrthologFinder:
     if the sequence entered is not in fasta format, then the resulting string will
     start with a sequence not in fasta format, followed by orthologs in fasta format
     """
+    #Todo: Add something about what HOGS are and what they do
 
     OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
@@ -71,6 +72,11 @@ class OrthologFinder:
 
     def retrieve_HOG_level(self, root=True):
         """
+        Retrieve information on the taxonomic levels that the HOG spans through
+        Args:
+            root(Boolean): if true, return the deepeest level of the HOG. If false, return a list
+            of the alternative level that the HOG spans through
+        Returns: The deepest level relating the HOG, or a list of all the levels
         """
         url = OrthologFinder.build_url(tail='/api/hog/{0}/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
@@ -85,6 +91,8 @@ class OrthologFinder:
 
     def read_HOGid(self, response, root):
         """
+        If root is true, return the level of the retrieved HOG. If false, return the list of all the
+        taxonomic levels that the HOG spans
         """
         response = json.loads(response.content.decode('utf-8'))
         if root:
@@ -143,6 +151,7 @@ class OrthologFinder:
 
     def HOG_to_fasta(self):
         """
+        Retrieves the fasta file containing the sequences of the proteins in the HOG of the input protein
         """
         url = OrthologFinder.build_url(tail='/oma/hogs/{0}/{1}/fasta/', variation=[self.id, self.hog_level])
         response = requests.get(url)
@@ -153,21 +162,10 @@ class OrthologFinder:
             self.save_status = response.status_code
             raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
-    def get_msa(self):
-        """
-        """
-        url = OrthologFinder.build_url(tail='/oma/hogs/{0}/{1}/msa/', variation = [self.id, self.hog_level])
-        response = requests.get(url)
-        if response.status_code == 200:
-            self.msa = str(response.text)
-            return self.msa
-        else:
-            self.save_status = response.status_code
-            raise exceptions.RequestException(
-                'There was an issue querying the database. Status code {0}'.format(self.save_status))
-
     def get_HOGs(self):
         """
+        Retrieves a fasta file containing the sequences of the proteins in the HOG to the input protein, based on the input
+        parameters.
         """
         self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
         if self.has_run_hogs:
@@ -182,9 +180,8 @@ class OrthologFinder:
 
     def get_orthologs(self):
         """
-        Returns the orthologous proteins to the sequence stored in the object
+        Retrieves a fasta file containing the sequences of the orthologous proteins, based on the input parameters
         """
-        ##Can I put the return statements in a finally block?
         if not self.fasta:
             raise SequenceError("Input sequence is empty!")
         self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
