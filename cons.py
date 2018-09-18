@@ -198,7 +198,6 @@ class OrthologFinder:
     def build_url(cls, tail, variation, base_url=OMA_BASE_URL):
         """
         Takes the passed parameters and builds a URL to query the OMA database
-
         Args:
             tail(str): The path and REST parameters that returns the desired info
             variation(list): A list of strings that contain the parameters unique
@@ -213,7 +212,6 @@ class OrthologFinder:
     def get_fasta_sequence(cls, fasta, index=0):
         """
         Given a fasta file, return the sequence at the given index
-
         Args:
             index(int): For a fasta file with multiple proteins, is the zero
                 indexed position of the desired protein within the file. So
@@ -236,7 +234,6 @@ class OrthologFinder:
     def indv_block(cls, st):
         """
         Return the header line and the sequence of individual constructs in a file
-
         Args:
             st(str): The text contained in a fasta file, as a string. Consists of a
                 header, which is initiated by > and ends with a newline. Subsequent
@@ -294,5 +291,5 @@ class OrthologFinder:
         elif sequences[0].isalpha():
             seq = ">Input Sequence" + os.linesep + sequences
         else:
-            raise SequenceError("Not a FASTA sequence. Please try again")
+            raise SequenceError("Not a sequence. Please try again")
         return seq

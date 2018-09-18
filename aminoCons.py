@@ -138,6 +138,9 @@ class Rate4Site(Executor):
         t.tryRemove(self.cwd + os.sep + 'r4s.res')
         t.tryRemove(self.cwd + os.sep + 'r4sOrig.res')
         super().cleanup()
+        if not self.cache:
+            self.close()
+            t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
 
     def close(self):
         """
@@ -148,15 +151,6 @@ class Rate4Site(Executor):
         t.tryRemove(self.cwd + os.sep + '%s.res' %(self.dir_name))
         t.tryRemove(self.tempdir, tree=True)
         self.has_run = False
-
-    def __del__(self):
-        """
-        Deletes output files for rate4site. When called by garbage collector it also
-        deletes the rate4site instance
-        """
-        if not self.cache:
-            self.close()
-            t.tryRemove(self.cwd + os.sep + self.dir_name, tree=True)
 
     @classmethod
     def get_alpha(cls, r4s):
