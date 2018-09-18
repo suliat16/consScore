@@ -11,24 +11,25 @@ import unittest
 import os
 import cons
 from requests import exceptions
-from requests.models import Response
 from unittest.mock import patch, MagicMock
-import numpy
 
 
 class TestCons(unittest.TestCase):
     """
+    Test suite testing the behaviour of the cons module
     """
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         lysozyme = ("MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGY"
-                  "NTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVAC"
-                  "AKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV")
-        cls.lyz = cons.OrthologFinder(lysozyme)
+                    "NTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVAC"
+                    "AKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV")
+        self.lyz = cons.OrthologFinder(lysozyme)
         stragg = ('YYYYYYYYYYYVVVVVVVVVVVVBBBBBBBBBBBAAAAAAAAAAANNNNNNNNNNN'
                   'MMMMMMMMMMMWWWWWWWWWWWWWCCCCCCCCCCSSSSSSSSSS')
-        cls.aggregate = cons.OrthologFinder(stragg)
-        with open((os.getcwd()+os.sep+'example_data'+os.sep+'arabidopsisCDC48Aseq.txt'), 'r') as file:
+        self.aggregate = cons.OrthologFinder(stragg)
+    @classmethod
+    def setUpClass(cls):
+
+        with open((os.getcwd()+os.sep+'example_data'+os.sep+'CDC48Aseq.txt'), 'r') as file:
             arabidopsisCDC48A = file.read()
         cls.CDC48A = cons.OrthologFinder(arabidopsisCDC48A)
 
@@ -53,40 +54,42 @@ class TestCons(unittest.TestCase):
         cls.lvlresponse = bytes(level_response, 'utf-8')
 
     def test_read_resp_retOMA(self):
+        """tests that read_resp_retOMA correctly parses the JSON response and retrieves the protein id"""
         the_response = MagicMock(content = self.response)
         self.CDC48A.read_resp_retOMA(the_response)
         self.assertTrue(self.CDC48A.id == "ARATH09528")
         
     def test_read_resp_upOMA(self):
+        """tests that read_resp_retOMA correctly parses the JSON response and saves a list of the ortholog ids"""
         the_response = MagicMock(content=self.oresponse)
         self.CDC48A.read_resp_orthoIDs(the_response)
         self.assertTrue("H3DFZ9" in self.CDC48A.ortholog_ids)
 
     def test_build_url_retOMA(self):
+        """Tests that build URL inserts the variable portions of the url correcly into the base"""
         self.lyz.sequence = 'MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV'
         self.assertEqual(self.lyz.build_url(tail='/api/sequence/?query={0}', variation=[self.lyz.sequence]), 'https://omabrowser.org/api/sequence/?query=MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV')
 
-    def test_build_url_tofasta(self):
-        self.assertEqual(self.lyz.build_url(tail='/oma/vps/{0}/fasta/', variation=[self.lyz.id]), 'https://omabrowser.org/oma/vps//fasta/')
-
     @patch('cons.requests.get')
     def test_ologs_stragg(self, requests_mock):
+        """Tests that a request with a bad status code raises an exception with get_orthologs"""
         requests_mock.requests.get.return_value = None
         requests_mock.requests.get.status_code = 400
         with self.assertRaises(exceptions.RequestException) as cm:
             straggFasta = self.aggregate.get_orthologs()
-        #TODO: returns None instead of raising an exception. Deal with it.
         err = cm.exception
         self.assertTrue('There was an issue querying the database. Status code' in str(err))
 
     @patch('cons.requests.get')
     def test_ofasta_stragg(self, requests_mock):
+        """Tests that a bad request raises an exception in ortholog_to_fasta"""
         requests_mock.requests.get.status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.ortholog_to_fasta()
 
     @patch('cons.requests.get')
     def test_ofasta_cdc(self, requests_mock):
+        """Tests that ortholog_to_fasta correctly parses the response data"""
         requests_mock().status_code = 200
         requests_mock().text = self.fresponse
         test = self.CDC48A.ortholog_to_fasta()
@@ -94,61 +97,90 @@ class TestCons(unittest.TestCase):
 
     @patch('cons.requests.get')
     def test_orIDs_stragg(self, requests_mock):
+        """Test that update_orthoIDs returns an exception given a bad request status"""
         requests_mock().status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.update_orthoIDs()
 
     @patch('cons.requests.get')
     def test_ret_hogs_stragg(self, requests_mock):
+        """Tests that retrieve_HOG_level throws an exception when given a bad request status"""
         requests_mock().status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.retrieve_HOG_level()
             
     def test_get_fasta_seq(self):
+        """Tests that get_fasta_seq only gets the sequence of the fasta string, not the identifying line"""
         tester = self.lyz.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
         self.assertFalse('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester)
         self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester)
 
+    def test_get_fasta_multi(self):
+        """tests that get_fasta returns a list of sequences given a fasta file"""
+        tester = self.lyz.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
+                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE
+                                    >LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]
+                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE
+                                    >ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]
+                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP""", index=1)
+        self.assertFalse("[Loxodonta africana]" in tester)
+        self.assertFalse(">PROCA12070 | ENSPCAG00000012030" in tester)
+        self.assertEqual(tester, "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE")
+
     def test_indv_blk(self):
-         tester = self.lyz.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+        """tests that indv_block can pull out individual fasta sequences with their identifying line"""
+        tester = self.lyz.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
-         self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
-         self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester[0])
+        self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
+        self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester[0])
 
     def test_empty_input(self):
+        """Checks that the correct exception is raised when an empty sequence is entered"""
         fs = cons.OrthologFinder("")
         with self.assertRaises(cons.SequenceError) as cm:
             fs.get_orthologs()
         err = cm.exception
         self.assertEqual(str(err), 'Input sequence is empty!')
 
-    def test_ortho_chk(self):
+    def test_empty_input_HOG(self):
+        """Checks that the correct exception is raised when an empty sequence is entered"""
+        #TODO: Implement error for empty sequence for HOGs
+        fs = cons.OrthologFinder("")
+        with self.assertRaises(cons.SequenceError) as cm:
+            fs.get_HOGs()
+        err = cm.exception
+        self.assertEqual(str(err), 'Input sequence is empty!')
+
+    def test_header_chk(self):
+        """test that header_check adds a header to a header-free string """
         output = cons.OrthologFinder.header_check("Hello World")
         self.assertEqual(output, ">Input Sequence\nHello World")
 
     def test_ortho_empty(self):
+        """tests that header_check raises an exception if an empty sequence is entered"""
         with self.assertRaises(cons.SequenceError) as cm:
             cons.OrthologFinder.header_check("")
         err = cm.exception
         self.assertEqual(str(err), "Empty Sequence entered.")
 
     def test_non_sequence(self):
+        """tests that header_check raises an exception if given a non alphabetic sequence"""
         with self.assertRaises(cons.SequenceError) as sm:
             cons.OrthologFinder.header_check("003893")
         err = sm.exception
-        self.assertEqual(str(err), "Not a FASTA sequence. Please try again")
+        self.assertEqual(str(err), "Not a sequence. Please try again")
 
     def test_ortho_already_fasta(self):
+        """tests that header_check doesn't change fasta sequences that already have a header"""
         output = cons.OrthologFinder.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
         self.assertEqual(output, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
 
-
-#The following tests work with internet disconnected- ask Arnaud
     @patch('cons.requests.get')
     def test_hog_fasta(self, mock_request):
+        """Tests that HOG_to_fasta correctly parses the request response"""
         self.lyz.hog_level = "Amniota"
         mock_request().status_code = 200
         mock_request().text = self.hresponse
@@ -157,6 +189,7 @@ class TestCons(unittest.TestCase):
 
     @patch('cons.requests.get')
     def test_read_hog_roottrue(self, mock_request):
+        """tests that read_HOGid retrieves the root ID when root=True"""
         thing = MagicMock(content=self.lvlresponse)
         mock_request().content = self.lvlresponse
         test = self.lyz.read_HOGid(thing, root=True)
@@ -164,6 +197,7 @@ class TestCons(unittest.TestCase):
 
     @patch('cons.requests.get')
     def test_read_hog_rootfalse(self, mock_request):
+        """tests that read_HOGid retrieves a list of the ids when root=False """
         thing = MagicMock(content=self.lvlresponse)
         mock_request().content = self.lvlresponse
         test = self.lyz.read_HOGid(thing, root=False)
