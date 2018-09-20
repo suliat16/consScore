@@ -111,7 +111,7 @@ class TestCons(unittest.TestCase):
             
     def test_get_fasta_seq(self):
         """Tests that get_fasta_seq only gets the sequence of the fasta string, not the identifying line"""
-        tester = self.lyz.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+        tester = cons.OrthologFinder.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
         self.assertFalse('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester)
@@ -119,23 +119,35 @@ class TestCons(unittest.TestCase):
 
     def test_get_fasta_multi(self):
         """tests that get_fasta returns a list of sequences given a fasta file"""
-        tester = self.lyz.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
-                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE
-                                    >LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]
-                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE
-                                    >ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]
-                                    MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP""", index=1)
+        tester = cons.OrthologFinder.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
+MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE
+>LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]
+MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE
+>ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]
+MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP""", index=1)
         self.assertFalse("[Loxodonta africana]" in tester)
         self.assertFalse(">PROCA12070 | ENSPCAG00000012030" in tester)
         self.assertEqual(tester, "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE")
 
     def test_indv_blk(self):
         """tests that indv_block can pull out individual fasta sequences with their identifying line"""
-        tester = self.lyz.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+        tester = cons.OrthologFinder.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
         self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
         self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester[0])
+
+    def test_indv_blk_multi(self):
+        """tests that indv_block can pull out individual fasta sequences from a string with multiple"""
+        tester = cons.OrthologFinder.indv_block(">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]\n"
+"MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE\n"
+">LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]\n"
+"MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTA\n"
+">ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]\n"  
+"MKTRQNKDSMSMRSGRKKEAPGPREELRS")
+        self.assertEqual(len(tester), 3)
+        self.assertEqual(tester[1],(">LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]\n"
+                                    "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTA" ))
 
     def test_empty_input(self):
         """Checks that the correct exception is raised when an empty sequence is entered"""
@@ -147,7 +159,6 @@ class TestCons(unittest.TestCase):
 
     def test_empty_input_HOG(self):
         """Checks that the correct exception is raised when an empty sequence is entered"""
-        #TODO: Implement error for empty sequence for HOGs
         fs = cons.OrthologFinder("")
         with self.assertRaises(cons.SequenceError) as cm:
             fs.get_HOGs()

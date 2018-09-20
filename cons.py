@@ -167,6 +167,8 @@ class OrthologFinder:
         Retrieves a fasta file containing the sequences of the proteins in the HOG to the input protein, based on the input
         parameters.
         """
+        if not self.fasta:
+            raise SequenceError("Input sequence is empty!")
         self.sequence = OrthologFinder.get_fasta_sequence(fasta=self.fasta)
         if self.has_run_hogs:
             output = self.HOGs
@@ -247,9 +249,13 @@ class OrthologFinder:
         """
         if st.startswith('>'):
             fstr = re.split('>', st)
-            fstr = list(filter(None, fstr))
-            fstr = ['>' + f for f in fstr]
-            return fstr
+            seq_list= []
+            for f in fstr:
+                if f:
+                    f = '>' + f
+                    f = f.rstrip()
+                    seq_list.append(f)
+            return seq_list
         else: return [st]
 
     @classmethod
