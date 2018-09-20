@@ -68,7 +68,7 @@ class ConservationPipe():
             filename = os.path.basename(sequence)
             self.name = filename.split('.')[0]
         else:
-            self.name = "Protein Sequence"
+            self.name = "Protein_Sequence"
         self.input = sequence
 
         self.cache = cache
@@ -90,6 +90,7 @@ class ConservationPipe():
             ortholog_call = cons.OrthologFinder(sequence)
         else:
             ortholog_call = cons.OrthologFinder(self.input)
+
         self.orthologs = ortholog_call.get_HOGs()
         with open("%s.orth" %(self.name), "w") as o_file:
             o_file.write(self.orthologs)
@@ -136,12 +137,17 @@ class ConservationPipe():
             os.makedirs(directory)
         os.chdir(directory)
 
-        orth = self.call_orthologs()
-        aln = self.call_alignment(orth)
-        r4s = self.call_rate4site(aln)
+        msa = directory+os.sep+'%s.aln'%(self.name)
+        if os.path.isfile(msa):
+            aln = msa
+            r4s = self.call_rate4site(aln)
+        else:
+            orth = self.call_orthologs()
+            aln = self.call_alignment(orth)
+            r4s = self.call_rate4site(aln)
+            os.remove(os.getcwd() + os.sep + "%s.orth"%(self.name))
 
         aminoCons.clean_alignment(aln, self.cache)
-        os.remove(os.getcwd() + os.sep + "%s.orth"%(self.name))
         os.chdir(old_dir)
         if not self.cache and not os.listdir(directory):
             os.rmdir(directory)

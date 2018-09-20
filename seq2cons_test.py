@@ -8,30 +8,74 @@ Created on Thurs Sept 13 2018
 
 import unittest
 import os
-import seq2conservation
+import aminoCons
+import seq2conservation as sq
 import cons
-pst
+from unittest.mock import patch
 
 
 class Test(unittest.TestCase):
     """
+    Test suite for the seq2conservation pipeline
     """
     def setUp(self):
         pass
 
     @classmethod
     def setUpClass(cls):
+        cls.cwd = os.getcwd()
 
         with open((os.getcwd()+os.sep+'example_data'+os.sep+'CDC48Aseq.txt'), 'r') as file:
             arabidopsisCDC48A = file.read()
-        cls.CDC48A = cons.OrthologFinder(arabidopsisCDC48A)
+        cls.CDC48A = sq.ConservationPipe(arabidopsisCDC48A, cache=False)
 
-    @patch('cons.requests.get')
-    def test_call_orthologs(self, requests_mock):
-        requests_mock().status_code = 200
-        requests_mock().text = 1 #Todo: some response
+        with open((os.getcwd()+os.sep+'example_data'+os.sep+'multiFasta.fasta'), 'r') as file:
+            cls.ex_seq = file.read()
 
+    @patch('seq2conservation.cons.OrthologFinder.get_HOGs')
+    def test_call_orthologs(self, HOG_mock):
+        """tests that call_orthologs correctly calls methods to make an output file of 'orthologs'"""
+        HOG_mock.return_value = self.ex_seq
+        tester = self.CDC48A.call_orthologs()
+        self.assertTrue(os.path.isfile(tester))
+        self.assertTrue('Protein_Sequence.orth' in tester)
 
+    def test_call_alignment(self):
+        """tests that call_alignment calls the correct methods and generates the correct output"""
+        tester = self.CDC48A.call_alignment(os.getcwd()+os.sep+'example_data'+os.sep+'multiFasta.fasta')
+        self.assertTrue(os.path.isfile(tester))
+        self.assertTrue('multiFasta.aln' in tester)
+        aminoCons.clean_alignment(tester, cache=False)
+
+    def test_call_rate4site(self):
+        """tests that call_rate4site calles the correct methods and generates the correct output"""
+        tester= self.CDC48A.call_rate4site(os.getcwd()+os.sep+'example_data'+os.sep + 'multiFasta.aln')
+        self.assertEqual(2.83688, tester)
+
+    @patch('seq2conservation.cons.OrthologFinder.get_HOGs')
+    @patch('seq2conservation.aminoCons.build_alignment')
+    @patch('seq2conservation.aminoCons.Rate4Site.run')
+    def test_pipe(self, mock_run, mock_aln, mock_hog):
+        """tests that the pipe calls the correct methods and generates the correct output"""
+        mock_hog.return_value = self.ex_seq
+        mock_aln.return_value = os.getcwd()+os.sep+'example_data'+os.sep + 'multiFasta.aln'
+        mock_run.return_value = {0:('A', 0.6979),
+                    1:('A', 0.6979),
+                    2:('C', 0.7026),
+                    3:('C', 0.7026),
+                    4:('G', 0.1769),
+                    5:('G', 0.1769),
+                    6:('T', -1.577),
+                    7:('T', -1.577)}
+        tester = self.CDC48A.pipe()
+        self.assertTrue(mock_run.called)
+        self.assertTrue(mock_aln.called)
+        self.assertTrue(mock_hog.called)
+        self.assertTrue(type(tester), dict)
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(os.getcwd()+ os.sep + 'Protein_Sequence.orth')
 
 if __name__ == '__main__':
     unittest.main()
