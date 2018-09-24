@@ -54,13 +54,13 @@ class TestCons(unittest.TestCase):
         cls.lvlresponse = bytes(level_response, 'utf-8')
 
     def test_read_resp_retOMA(self):
-        """tests that read_resp_retOMA correctly parses the JSON response and retrieves the protein id"""
+        """tests that read_resp_protID correctly parses the JSON response and retrieves the protein id"""
         the_response = MagicMock(content = self.response)
-        self.CDC48A.read_resp_retOMA(the_response)
+        self.CDC48A.read_resp_protID(the_response)
         self.assertTrue(self.CDC48A.id == "ARATH09528")
         
     def test_read_resp_upOMA(self):
-        """tests that read_resp_retOMA correctly parses the JSON response and saves a list of the ortholog ids"""
+        """tests that read_resp_protID correctly parses the JSON response and saves a list of the ortholog ids"""
         the_response = MagicMock(content=self.oresponse)
         self.CDC48A.read_resp_orthoIDs(the_response)
         self.assertTrue("H3DFZ9" in self.CDC48A.ortholog_ids)

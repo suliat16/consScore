@@ -31,7 +31,6 @@ class OrthologFinder:
     OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
 
-
     def __init__(self, fasta):
         self.fasta = fasta
         self.sequence = ""
@@ -47,17 +46,15 @@ class OrthologFinder:
         """
         Takes a protein sequence and returns the oma id of the best protein
         match
-
         Args:
             sequence (str): The single letter protein sequence to be queried
-
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
         url = OrthologFinder.build_url(tail='/api/sequence/?query={0}', variation=[self.sequence])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
-            self.read_resp_retOMA(response)
+            self.read_resp_protID(response)
         if response.status_code == 504:
             self.save_status = response.status_code
             raise TimeoutError('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status))
@@ -65,7 +62,7 @@ class OrthologFinder:
             self.save_status = response.status_code
             raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
 
-    def read_resp_retOMA(self, response):
+    def read_resp_protID(self, response):
         response = json.loads(response.content.decode('utf-8'))
         save = response['targets']
         self.id = save[0]['omaid']
@@ -74,7 +71,7 @@ class OrthologFinder:
         """
         Retrieve information on the taxonomic levels that the HOG spans through
         Args:
-            root(Boolean): if true, return the deepeest level of the HOG. If false, return a list
+            root(Boolean): if true, return the deepest level of the HOG. If false, return a list
             of the alternative level that the HOG spans through
         Returns: The deepest level relating the HOG, or a list of all the levels
         """
@@ -177,6 +174,7 @@ class OrthologFinder:
             self.retrieve_OMAid()
             self.retrieve_HOG_level()
             output = self.HOG_to_fasta()
+            output = OrthologFinder.remove_protein(output, self.id)
             self.has_run_hogs = True
             return output
 
@@ -192,6 +190,7 @@ class OrthologFinder:
         else:
             self.retrieve_OMAid()
             output = self.ortholog_to_fasta()
+            output = OrthologFinder.remove_first_protein(output)
             output = OrthologFinder.seqnwl_strip(self.sequence) + os.linesep + output
             self.has_run = True
         return output
@@ -299,3 +298,37 @@ class OrthologFinder:
         else:
             raise SequenceError("Not a sequence. Please try again")
         return seq
+
+    @classmethod
+    def remove_first_protein(cls, fasta):
+        """
+        Removes the first protein in a string containing proteins in fasta format
+        Args:
+            fasta(str): The proteins in fasta format
+        Returns: A string containing the proteins in fasta format, without the first protein
+        """
+        fasta_list = OrthologFinder.indv_block(fasta)
+        fasta_list.pop(0)
+        fasta_string = ''
+        for f in fasta_list:
+            fasta_string = fasta_string + f
+        return fasta_string
+
+    @classmethod
+    def remove_protein(cls, fasta, id):
+        """
+        Removes the protein matching the entered id from the fasta string
+        Args:
+            fasta(str): The identification line and sequences of all the proteins, in fasta format
+            id(str): The OMA id of the closest protein match to the input sequence
+        Returns:
+             A string containing the proteins in fasta format, without the protein with the entered id
+        """
+        fasta_list = OrthologFinder.indv_block(fasta)
+        for protein in fasta_list:
+            if id in protein:
+                fasta_list.remove(protein)
+        fasta_string = ''
+        for protein in fasta_list:
+            fasta_string = fasta_string + protein
+        return fasta_string
