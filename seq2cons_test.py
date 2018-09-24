@@ -40,16 +40,22 @@ class Test(unittest.TestCase):
         self.assertTrue(os.path.isfile(tester))
         self.assertTrue('Protein_Sequence.orth' in tester)
 
-    def test_call_alignment(self):
+    @patch('seq2conservation.aminoCons.build_alignment')
+    def test_call_alignment(self, mock_aln):
         """tests that call_alignment calls the correct methods and generates the correct output"""
+        mock_aln.return_value = os.getcwd()+os.sep+'example_data'+os.sep + 'multiFasta.aln'
         tester = self.CDC48A.call_alignment(os.getcwd()+os.sep+'example_data'+os.sep+'multiFasta.fasta')
+        self.assertTrue(mock_aln.called)
         self.assertTrue(os.path.isfile(tester))
         self.assertTrue('multiFasta.aln' in tester)
         aminoCons.clean_alignment(tester, cache=False)
 
-    def test_call_rate4site(self):
-        """tests that call_rate4site calles the correct methods and generates the correct output"""
+    @patch('seq2conservation.aminoCons.Rate4Site.get_alpha')
+    def test_call_rate4site(self, mock_score):
+        """tests that call_rate4site calls the correct methods and generates the correct output"""
+        mock_score.return_value = 2.83688
         tester= self.CDC48A.call_rate4site(os.getcwd()+os.sep+'example_data'+os.sep + 'multiFasta.aln')
+        self.assertTrue(mock_score.called)
         self.assertEqual(2.83688, tester)
 
     @patch('seq2conservation.cons.OrthologFinder.get_HOGs')
