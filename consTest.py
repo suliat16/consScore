@@ -7,17 +7,20 @@ Created on Thu May 24 14:49:39 2018
 
 Test file for cons
 """
-import unittest
+import biskit.test
 import os
 import cons
 from requests import exceptions
 from unittest.mock import patch, MagicMock
 
 
-class TestCons(unittest.TestCase):
+class TestCons(biskit.test.BiskitTest):
     """
     Test suite testing the behaviour of the cons module
     """
+
+    TAGS = [biskit.test.NORMAL]
+
     def setUp(self):
         lysozyme = ("MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGY"
                     "NTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVAC"
@@ -217,4 +220,4 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
         self.assertTrue('Gorilla gorilla gorilla' in test)
 
 if __name__ == '__main__':
-    unittest.main()
+    biskit.test.localTest()

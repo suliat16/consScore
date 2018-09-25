@@ -6,14 +6,16 @@ Created on Sun Jul  1 16:58:25 2018
 @author: suliat16
 """
 import os
-import unittest
 import aminoCons as am
+import biskit.test
 
-class test_amino_conservation(unittest.TestCase):
+class test_amino_conservation(biskit.test.BiskitTest):
 
     """
     Test suite testing the behaviour of the aminoCons module
     """
+
+    TAGS = [biskit.test.EXE, biskit.test.LONG]
 
     @classmethod
     def setUpClass(cls):
@@ -113,4 +115,4 @@ class test_amino_conservation(unittest.TestCase):
         am.clean_alignment('/home/suliat16/kaust/consScore/multiFasta.aln', cache=False)
 
 if __name__ == '__main__':
-    unittest.main()
+    biskit.test.localTest()

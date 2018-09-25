@@ -6,20 +6,19 @@ Created on Thurs Sept 13 2018
 @author: suliat16
 """
 
-import unittest
+import biskit.test
 import os
 import aminoCons
 import seq2conservation as sq
-import cons
 from unittest.mock import patch
 
 
-class Test(unittest.TestCase):
+class Test(biskit.test.BiskitTest):
     """
     Test suite for the seq2conservation pipeline
     """
-    def setUp(self):
-        pass
+
+    TAGS = [biskit.test.NORMAL, biskit.test.LONG]
 
     @classmethod
     def setUpClass(cls):
@@ -84,4 +83,4 @@ class Test(unittest.TestCase):
         os.remove(os.getcwd()+ os.sep + 'Protein_Sequence.orth')
 
 if __name__ == '__main__':
-    unittest.main()
+    biskit.test.localTest()
