@@ -31,6 +31,7 @@ import cons
 import aminoCons
 import os
 from biskit.errors import BiskitError
+from requests import RequestException
 
 class PipelineError(BiskitError):
     pass
@@ -83,15 +84,16 @@ class ConservationPipe():
         """
         Retrieves the HOGS of the input sequence. This is done by querying the OMA online database.
         """
-        #TODO: exception handling in case of no hogs- call normal oma
         if os.path.isfile(self.input):
             with open(self.input, "r") as file:
                 sequence = file.read()
             ortholog_call = cons.OrthologFinder(sequence)
         else:
             ortholog_call = cons.OrthologFinder(self.input)
-
-        self.orthologs = ortholog_call.get_HOGs()
+        try:
+            self.orthologs = ortholog_call.get_HOGs()
+        except RequestException:
+            self.orthologs = ortholog_call.get_orthologs()
         with open("%s.orth" %(self.name), "w") as o_file:
             o_file.write(self.orthologs)
         return os.getcwd() + os.sep + "%s.orth"%(self.name)
@@ -104,7 +106,6 @@ class ConservationPipe():
         Returns:
             The filepath to the the msa
         """
-        #TODO: to be called only if there are no pregenerated msa- they take too long
         alignment = aminoCons.build_alignment(orthologs)
         self.alignment = alignment
         return alignment

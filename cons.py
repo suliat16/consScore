@@ -20,13 +20,10 @@ class OrthologFinder:
 
     """
     Queries OMA with a protein sequence or fasta to try and retrieve the
-    orthologs of that protein. The ortholog data includes the original
-    sequence, which is first in the results, as well as the sequence of the
-    closest protein match in the database, which is labelled with self. Note
-    if the sequence entered is not in fasta format, then the resulting string will
-    start with a sequence not in fasta format, followed by orthologs in fasta format
+    orthologs of that protein. If get_HOGs is selected instead, the Hierarchical
+    Orthologous Group of the protein will be retrieved instead of the orthologs, which provides
+    a smaller group of more closely related orthologs than get_orthologs will return.
     """
-    #Todo: Add something about what HOGS are and what they do
 
     OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
@@ -311,7 +308,7 @@ class OrthologFinder:
         fasta_list.pop(0)
         fasta_string = ''
         for f in fasta_list:
-            fasta_string = fasta_string + f
+            fasta_string = fasta_string + f + os.linesep
         return fasta_string
 
     @classmethod
@@ -330,5 +327,5 @@ class OrthologFinder:
                 fasta_list.remove(protein)
         fasta_string = ''
         for protein in fasta_list:
-            fasta_string = fasta_string + protein
+            fasta_string = fasta_string + protein + os.linesep
         return fasta_string
