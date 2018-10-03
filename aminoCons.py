@@ -60,7 +60,7 @@ class Rate4Site(Executor):
     """
     Wraps the Rate4Site program. Calling run() executes the program, which creates
     a folder containing the rate4site output information and the tree, and returns
-    an array that maps the data onto each amino acid, which by default is the
+    a dictionary that maps the data onto each amino acid, which by default is the
     conservation score.
 
     Rate4Site is used for academic purposes. Citation:
@@ -81,7 +81,6 @@ class Rate4Site(Executor):
         self.score_output = self.cwd + os.sep + '%s.res'% self.dir_name
         self.has_run = False
         self.cache = cache
-
         self.identity = identity
         self.score= score
         self.qqint = qqint
@@ -90,8 +89,8 @@ class Rate4Site(Executor):
 
     def run(self):
         """
-        Calls the executor run method if it is a first run, otherwise just calls
-        the post execution methods on the cached files
+Calls the executor run method if it is a first run, otherwise just calls
+the post execution methods on the cached files
         """
         if self.has_run:
             self.finish()
