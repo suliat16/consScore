@@ -21,7 +21,7 @@ Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of site-spec
 Bayesian methods are superior. Mol Biol Evol 21: 1781-1791.
 """
 
-import cons
+import oma
 import aminoCons
 import argparse
 import os
@@ -43,10 +43,10 @@ with open(args.sequence, 'r') as prot_file:
     prot_seq = prot_file.read()
 
 if args.hogs:
-    seq2ortho = cons.OrthologFinder(prot_seq)
+    seq2ortho = oma.OrthologFinder(prot_seq)
     orthologs = seq2ortho.get_HOGs()
 else:
-    seq2ortho = cons.OrthologFinder(prot_seq)
+    seq2ortho = oma.OrthologFinder(prot_seq)
     orthologs = seq2ortho.get_orthologs()
 
 with open("%s.txt" %(args.name), 'w') as seq_file:
