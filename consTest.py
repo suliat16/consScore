@@ -73,7 +73,7 @@ class TestCons(biskit.test.BiskitTest):
         self.lyz.sequence = 'MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV'
         self.assertEqual(self.lyz.build_url(tail='/api/sequence/?query={0}', variation=[self.lyz.sequence]), 'https://omabrowser.org/api/sequence/?query=MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV')
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_ologs_stragg(self, requests_mock):
         """Tests that a request with a bad status code raises an exception with get_orthologs"""
         requests_mock.requests.get.return_value = None
@@ -83,14 +83,14 @@ class TestCons(biskit.test.BiskitTest):
         err = cm.exception
         self.assertTrue('There was an issue querying the database. Status code' in str(err))
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_ofasta_stragg(self, requests_mock):
         """Tests that a bad request raises an exception in ortholog_to_fasta"""
         requests_mock.requests.get.status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.ortholog_to_fasta()
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_ofasta_cdc(self, requests_mock):
         """Tests that ortholog_to_fasta correctly parses the response data"""
         requests_mock().status_code = 200
@@ -98,14 +98,14 @@ class TestCons(biskit.test.BiskitTest):
         test = self.CDC48A.ortholog_to_fasta()
         self.assertTrue('[Arabis alpina]' in test)
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_orIDs_stragg(self, requests_mock):
         """Test that update_orthoIDs returns an exception given a bad request status"""
         requests_mock().status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.update_orthoIDs()
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_ret_hogs_stragg(self, requests_mock):
         """Tests that retrieve_HOG_level throws an exception when given a bad request status"""
         requests_mock().status_code = 400
@@ -192,7 +192,7 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
         output = oma.OrthologFinder.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
         self.assertEqual(output, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_hog_fasta(self, mock_request):
         """Tests that HOG_to_fasta correctly parses the request response"""
         self.lyz.hog_level = "Amniota"
@@ -201,7 +201,7 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
         test = self.lyz.HOG_to_fasta()
         self.assertTrue("HOG:0377891.2a.2a" in test)
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_read_hog_roottrue(self, mock_request):
         """tests that read_HOGid retrieves the root ID when root=True"""
         thing = MagicMock(content=self.lvlresponse)
@@ -209,7 +209,7 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
         test = self.lyz.read_HOGid(thing, root=True)
         self.assertEqual(test, 'Amniota')
 
-    @patch('cons.requests.get')
+    @patch('oma.requests.get')
     def test_read_hog_rootfalse(self, mock_request):
         """tests that read_HOGid retrieves a list of the ids when root=False """
         thing = MagicMock(content=self.lvlresponse)
