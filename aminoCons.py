@@ -9,7 +9,6 @@ Created on Tue Jun 26 09:45:57 2018
 import os
 import re
 import warnings
-import numpy as np
 import biskit.tools as t
 from Bio.Align.Applications import TCoffeeCommandline
 from biskit.exe import Executor

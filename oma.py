@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Intakes a sequence in protein single letter alphabet, and returns the orthologs
 of the closest protein to that sequence. Either a string in fasta format, or the
@@ -17,7 +15,6 @@ class SequenceError(BiskitError):
     pass
 
 class OrthologFinder:
-
     """
     Queries OMA with a protein sequence or fasta to try and retrieve the
     orthologs of that protein. If get_HOGs is selected instead, the Hierarchical

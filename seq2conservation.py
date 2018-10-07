@@ -27,7 +27,7 @@ Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of site-spec
 Bayesian methods are superior. Mol Biol Evol 21: 1781-1791.
 """
 
-import cons
+import oma
 import aminoCons
 import os
 from biskit.errors import BiskitError
@@ -87,9 +87,9 @@ class ConservationPipe():
         if os.path.isfile(self.input):
             with open(self.input, "r") as file:
                 sequence = file.read()
-            ortholog_call = cons.OrthologFinder(sequence)
+            ortholog_call = oma.OrthologFinder(sequence)
         else:
-            ortholog_call = cons.OrthologFinder(self.input)
+            ortholog_call = oma.OrthologFinder(self.input)
         try:
             self.orthologs = ortholog_call.get_HOGs()
         except RequestException:

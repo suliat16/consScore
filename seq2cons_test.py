@@ -31,7 +31,7 @@ class Test(biskit.test.BiskitTest):
         with open((os.getcwd()+os.sep+'example_data'+os.sep+'multiFasta.fasta'), 'r') as file:
             cls.ex_seq = file.read()
 
-    @patch('seq2conservation.cons.OrthologFinder.get_HOGs')
+    @patch('seq2conservation.oma.OrthologFinder.get_HOGs')
     def test_call_orthologs(self, HOG_mock):
         """tests that call_orthologs correctly calls methods to make an output file of 'orthologs'"""
         HOG_mock.return_value = self.ex_seq
@@ -57,7 +57,7 @@ class Test(biskit.test.BiskitTest):
         self.assertTrue(mock_score.called)
         self.assertEqual(2.83688, tester)
 
-    @patch('seq2conservation.cons.OrthologFinder.get_HOGs')
+    @patch('seq2conservation.oma.OrthologFinder.get_HOGs')
     @patch('seq2conservation.aminoCons.build_alignment')
     @patch('seq2conservation.aminoCons.Rate4Site.run')
     def test_pipe(self, mock_run, mock_aln, mock_hog):
