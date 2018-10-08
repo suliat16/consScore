@@ -4,7 +4,7 @@
 Pipeline which retrieves the conservation score of the amino acids in sequence
 given an input sequence or fasta file. Intakes the sequence or fasta string of a protein using the standard, single letter alphabet,
 gets the orthologs from an external (online) database, the OMA browser. It then generates a
-multiple sequence alignment (MSA) using T-Coffee, and calculates the conservation score of each
+multiple sequence alignment (MSA) using Mafft, and calculates the conservation score of each
 amino acid at each position using Rate4Site, with respect to the entered sequence.
 
 The steps of the pipeline are as follows:
@@ -18,9 +18,11 @@ Altenhoff A et al., The OMA orthology database in 2018: retrieving evolutionary 
 all domains of life through richer web and programmatic interfaces Nucleic Acids Research, 2018,
 46 (D1): D477-D485 (doi:10.1093/nar/gkx1019).
 
-T-Coffee:
-T-Coffee: A novel method for multiple sequence alignments.
-Notredame,Higgins,Heringa,JMB,302(205-217)2000
+Mafft:
+*Katoh, Misawa, Kuma and Miyata (Nucleic Acids Res. 30:3059-3066, 2002) MAFFT: a novel method for rapid
+multiple sequence alignment based on fast Fourier transform (describes the FFT-NS-1, FFT-NS-2 and FFT-NS-i
+strategies)
+
 
 Rate4Site:
 Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of site-specific rate-inference methods:
@@ -100,7 +102,7 @@ class ConservationPipe():
 
     def call_alignment(self, orthologs):
         """
-        Calls T-Coffee to generate an MSA of the orthologs that have been input.
+        Calls Mafft to generate an MSA of the orthologs that have been input.
         Args:
             orthologs(str): The filepath to the file containing the orthologs of the input, in fasta format
         Returns:
@@ -127,7 +129,7 @@ class ConservationPipe():
 
     def pipe(self):
         """
-        Queries the OMA database, T-coffee and Rate4Site in sequence to get the
+        Queries the OMA database, Mafft and Rate4Site in sequence to get the
         Returns:
             A dictionary containing the various statistical scores mapped to each amino acid, depending
             on which inputs were selected.

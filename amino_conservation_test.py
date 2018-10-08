@@ -25,6 +25,7 @@ class test_amino_conservation(biskit.test.BiskitTest):
         """Tests to see that alignment file and the folder created are deleted
         after calling clean argument"""
         extra_aln = am.build_alignment(self.filepath +os.sep + 'multiFasta.fasta')
+        self.assertTrue(os.path.exists(extra_aln))
         am.clean_alignment(extra_aln, cache=False)
         self.assertFalse(os.path.exists(extra_aln))
 
