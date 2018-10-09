@@ -9,6 +9,7 @@ Created on Tue Jun 26 09:45:57 2018
 import os
 import re
 import warnings
+import constool
 import biskit.tools as t
 from biskit.exe import Executor
 from biskit.errors import BiskitError
@@ -95,14 +96,13 @@ class Rate4Site(Executor):
         else:
             return super().run()
 
-
     def finish(self):
         """
         Overwrites Executor method. Called when the program is done executing.
         """
         super().finish()
-        self.alpha = self.get_alpha(self.score_output)
-        self.result = self.rate2dict(self.score_output, identity=self.identity, score=self.score,
+        self.alpha = get_alpha(self.score_output)
+        self.result = rate2dict(self.score_output, identity=self.identity, score=self.score,
                                      qqint=self.qqint, std= self.std, gapped = self.gapped)
         self.has_run = True
 
@@ -148,123 +148,109 @@ class Rate4Site(Executor):
         t.tryRemove(self.tempdir, tree=True)
         self.has_run = False
 
-    @classmethod
-    def get_alpha(cls, r4s):
-        """
-        Get the alpha parameter of the conservation scores, as defined by rate4site
-        Args:
-            r4s (file): The absolute file path to the alignment file
-        Returns:
-            The alpha parameter of the conservation score.
-        """
-        try:
-            if os.path.isfile(r4s):
-                with open(r4s, 'r') as f:
-                    contents = f.read()
-                splitted = contents.split(os.linesep)
-                for s in splitted:
-                    if re.search('alpha parameter', s):
-                        parameter = Rate4Site.get_num(s)
-                        return parameter[0]
-                raise Rate4SiteError('File format is not supported')
-            else: 
-                raise FileNotFoundError
-        except IndexError:
+
+def get_alpha(r4s):
+    """
+    Get the alpha parameter of the conservation scores, as defined by rate4site
+    Args:
+        r4s (file): The absolute file path to the alignment file
+    Returns:
+        The alpha parameter of the conservation score.
+    """
+    try:
+        if os.path.isfile(r4s):
+            with open(r4s, 'r') as f:
+                contents = f.read()
+            splitted = contents.split(os.linesep)
+            for s in splitted:
+                if re.search('alpha parameter', s):
+                    parameter = constool.get_num(s)
+                    return parameter[0]
             raise Rate4SiteError('File format is not supported')
-        finally:
-            warnings.warn("This method is especially susceptible to changes in the format of \
-            the output file", Warning)
+        else:
+            raise FileNotFoundError
+    except IndexError:
+        raise Rate4SiteError('File format is not supported')
+    finally:
+        warnings.warn("This method is especially susceptible to changes in the format of \
+        the output file", Warning)
 
-    @classmethod
-    def get_num(cls, string):
-        """
-        Takes a string and returns the first number in that string, decimal included
-        Args:
-            string(str): The string containing a number
-        Returns:
-            A list of all the numbers contained in that string, as floats
-        """
-        digits = r"-?[0-9]*\.?[0-9]+"
-        parameter = re.findall(digits, string)
-        return list(map(float, parameter))
 
-    @classmethod
-    def rate2dict(cls, r4s, identity=True, score=True, qqint=False, std=False,
-                  gapped=False):
-        """
-        Take the output from rate4site and convert it into a numpy array, mapping
-        each conservation score onto its corresponding amino acid.
+def rate2dict(r4s, identity=True, score=True, qqint=False, std=False,
+              gapped=False):
+    """
+    Take the output from rate4site and convert it into a numpy array, mapping
+    each conservation score onto its corresponding amino acid.
 
-        Args:
-            r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
-            If the following parameters are true, the resulting dictionary will contain that information, in the
-            order of the arguments
-                identity (boolean): The identity of the amino acid (Single letter code) at each position
-                score(boolean): The conservation scores. lower value = higher conservation.
-                qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
-                std(boolean): The standard deviation of hte posterior rate distribution
-                gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
-                    number of sequences at each position
-        Returns:
-            An array, where the entry at each index contains information about
-            the amino acid at that position.
-        """
-        # The document is parsed by pulling splitting the text from the output file
-        # using newlines as delimiters, and grabbing only the lines that do not start
-        # with a # symbol. Whats left are the rows of the table, where each row contains
-        # information about an amino acid. The rows are then split up depending on
-        # what information it carries.
+    Args:
+        r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
+        If the following parameters are true, the resulting dictionary will contain that information, in the
+        order of the arguments
+            identity (boolean): The identity of the amino acid (Single letter code) at each position
+            score(boolean): The conservation scores. lower value = higher conservation.
+            qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
+            std(boolean): The standard deviation of hte posterior rate distribution
+            gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
+                number of sequences at each position
+    Returns:
+        An array, where the entry at each index contains information about
+        the amino acid at that position.
+    """
+    # The document is parsed by pulling splitting the text from the output file
+    # using newlines as delimiters, and grabbing only the lines that do not start
+    # with a # symbol. Whats left are the rows of the table, where each row contains
+    # information about an amino acid. The rows are then split up depending on
+    # what information it carries.
 
-        try:
-            if os.path.isfile(r4s):
-                with open(r4s, 'r') as file:
-                    contents = file.read()
-                residues = Rate4Site.extract_resi(contents)
-                r2dict = {}
-                i=0
-                for r in residues:
-                    r2mat = []
-                    aa_data = re.split(r'[\]\[\s,]', r)
-                    aa_data = list(filter(lambda x: x is not '', aa_data))
-                    if identity:
-                        amino = aa_data[1]
-                        r2mat.append(amino)
-                    if score:
-                        conse = float(aa_data[2])
-                        r2mat.append(conse)
-                    if qqint:
-                        intqq = (float(aa_data[3]), float(aa_data[4]))
-                        r2mat.append(intqq)
-                    if std:
-                        stdev = float(aa_data[5])
-                        r2mat.append(stdev)
-                    if gapped:
-                        align = aa_data[6]
-                        r2mat.append(align)
-                    r2mat = tuple(r2mat)
-                    r2dict[i] = r2mat
-                    i+=1
-                return r2dict
-            else:
-                raise FileNotFoundError
-        finally:
-            warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
+    try:
+        if os.path.isfile(r4s):
+            with open(r4s, 'r') as file:
+                contents = file.read()
+            residues = extract_resi(contents)
+            r2dict = {}
+            i=0
+            for r in residues:
+                r2mat = []
+                aa_data = re.split(r'[\]\[\s,]', r)
+                aa_data = list(filter(lambda x: x is not '', aa_data))
+                if identity:
+                    amino = aa_data[1]
+                    r2mat.append(amino)
+                if score:
+                    conse = float(aa_data[2])
+                    r2mat.append(conse)
+                if qqint:
+                    intqq = (float(aa_data[3]), float(aa_data[4]))
+                    r2mat.append(intqq)
+                if std:
+                    stdev = float(aa_data[5])
+                    r2mat.append(stdev)
+                if gapped:
+                    align = aa_data[6]
+                    r2mat.append(align)
+                r2mat = tuple(r2mat)
+                r2dict[i] = r2mat
+                i+=1
+            return r2dict
+        else:
+            raise FileNotFoundError
+    finally:
+        warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
 
-    @classmethod
-    def extract_resi(cls, string):
-        """
-        Grabs the lines of the table that correspond to amino acid data, and puts
-        them in a list.
-        Args:
-            string(str): The contents of the rate4site file
-        Returns:
-            The rows of the amino acid table as a list of strings.
-        """
-        splitted = string.split(os.linesep)
-        residues = []
-        for s in splitted:
-            #Remove comments and empty lines
-            if s is not '' and not s.startswith('#'):
-                #Remove comments
-                residues.append(s)
-        return residues
+def extract_resi( string):
+    """
+    Grabs the lines of the table that correspond to amino acid data, and puts
+    them in a list.
+    Args:
+        string(str): The contents of the rate4site file
+    Returns:
+        The rows of the amino acid table as a list of strings.
+    """
+    splitted = string.split(os.linesep)
+    residues = []
+    for s in splitted:
+        #Remove comments and empty lines
+        if s is not '' and not s.startswith('#'):
+            #Remove comments
+            residues.append(s)
+    return residues

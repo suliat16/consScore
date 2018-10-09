@@ -10,6 +10,7 @@ Test file for cons
 import biskit.test
 import os
 import oma
+import constool
 from requests import exceptions
 from unittest.mock import patch, MagicMock
 
@@ -71,7 +72,7 @@ class TestCons(biskit.test.BiskitTest):
     def test_build_url_retOMA(self):
         """Tests that build URL inserts the variable portions of the url correcly into the base"""
         self.lyz.sequence = 'MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV'
-        self.assertEqual(self.lyz.build_url(tail='/api/sequence/?query={0}', variation=[self.lyz.sequence]), 'https://omabrowser.org/api/sequence/?query=MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV')
+        self.assertEqual(constool.build_url(base_url='https://omabrowser.org', tail='/api/sequence/?query={0}', variation=[self.lyz.sequence]), 'https://omabrowser.org/api/sequence/?query=MKALIVLGLVLLSVTVQGKVFERCELARTLKRLGMDGYRGISLANWMCLAKWESGYNTRATNYNAGDRSTDYGIFQINSRYWCNDGKTPGAVNACHLSCSALLQDNIADAVACAKRVVRDPQGIRAWVAWRNRCQNRDVRQYVQGCGV')
 
     @patch('oma.requests.get')
     def test_ologs_stragg(self, requests_mock):
@@ -114,7 +115,7 @@ class TestCons(biskit.test.BiskitTest):
             
     def test_get_fasta_seq(self):
         """Tests that get_fasta_seq only gets the sequence of the fasta string, not the identifying line"""
-        tester = oma.OrthologFinder.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+        tester = constool.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
         self.assertFalse('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester)
@@ -122,7 +123,7 @@ class TestCons(biskit.test.BiskitTest):
 
     def test_get_fasta_multi(self):
         """tests that get_fasta returns a list of sequences given a fasta file"""
-        tester = oma.OrthologFinder.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
+        tester = constool.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
 MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE
 >LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]
 MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE
@@ -134,7 +135,7 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
 
     def test_indv_blk(self):
         """tests that indv_block can pull out individual fasta sequences with their identifying line"""
-        tester = oma.OrthologFinder.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
+        tester = constool.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
                                     MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
                                     TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
         self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
@@ -142,7 +143,7 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
 
     def test_indv_blk_multi(self):
         """tests that indv_block can pull out individual fasta sequences from a string with multiple"""
-        tester = oma.OrthologFinder.indv_block(">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]\n"
+        tester = constool.indv_block(">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]\n"
 "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE\n"
 ">LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]\n"
 "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTA\n"
@@ -170,26 +171,26 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
 
     def test_header_chk(self):
         """test that header_check adds a header to a header-free string """
-        output = oma.OrthologFinder.header_check("Hello World")
+        output = constool.header_check("Hello World")
         self.assertEqual(output, ">Input Sequence\nHello World")
 
     def test_ortho_empty(self):
         """tests that header_check raises an exception if an empty sequence is entered"""
-        with self.assertRaises(oma.SequenceError) as cm:
-            oma.OrthologFinder.header_check("")
+        with self.assertRaises(constool.SequenceError) as cm:
+            constool.header_check("")
         err = cm.exception
         self.assertEqual(str(err), "Empty Sequence entered.")
 
     def test_non_sequence(self):
         """tests that header_check raises an exception if given a non alphabetic sequence"""
-        with self.assertRaises(oma.SequenceError) as sm:
-            oma.OrthologFinder.header_check("003893")
+        with self.assertRaises(constool.SequenceError) as sm:
+            constool.header_check("003893")
         err = sm.exception
         self.assertEqual(str(err), "Not a sequence. Please try again")
 
     def test_ortho_already_fasta(self):
         """tests that header_check doesn't change fasta sequences that already have a header"""
-        output = oma.OrthologFinder.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
+        output = constool.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
         self.assertEqual(output, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
 
     @patch('oma.requests.get')
