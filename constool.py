@@ -5,26 +5,29 @@ import os
 import re
 from biskit.errors import BiskitError
 
+
 class SequenceError(BiskitError):
     pass
 
-def remove_protein(fasta, id):
+
+def remove_protein(fasta, iden):
     """
     Removes the protein matching the entered id from the fasta string
     Args:
         fasta(str): The identification line and sequences of all the proteins, in fasta format
-        id(str): The OMA id of the closest protein match to the input sequence
+        iden(str): The OMA id of the closest protein match to the input sequence
     Returns:
          A string containing the proteins in fasta format, without the protein with the entered id
     """
     fasta_list = indv_block(fasta)
     for protein in fasta_list:
-        if id in protein:
+        if iden in protein:
             fasta_list.remove(protein)
     fasta_string = ''
     for protein in fasta_list:
         fasta_string = fasta_string + protein + os.linesep
     return fasta_string
+
 
 def remove_first_protein(fasta):
     """
@@ -39,6 +42,7 @@ def remove_first_protein(fasta):
     for f in fasta_list:
         fasta_string = fasta_string + f + os.linesep
     return fasta_string
+
 
 def header_check(sequences):
     """
@@ -75,7 +79,7 @@ def seqnwl_strip(string):
     seqhead = header_check(string)
     newlist = seqhead.split(os.linesep)
     newlist = list(filter(None, newlist))
-    header = newlist[0] + os.linesep + newlist[1]
+    header = newlist[0] + os.linesep
     newlist.pop(0)
     newlist.insert(0, header)
     newstring = ''.join(newlist)
@@ -98,20 +102,22 @@ def indv_block(st):
     """
     if st.startswith('>'):
         fstr = re.split('>', st)
-        seq_list= []
+        seq_list = []
         for f in fstr:
             if f:
                 f = '>' + f
                 f = f.rstrip()
                 seq_list.append(f)
         return seq_list
-    else: return [st]
+    else:
+        return [st]
 
 
 def get_fasta_sequence(fasta, index=0):
     """
-    Given a fasta file, return the sequence at the given index
+    Given a string in fasta format, return the sequence at the given index
     Args:
+        fasta (str):The input sequence in fasta format
         index(int): For a fasta file with multiple proteins, is the zero
             indexed position of the desired protein within the file. So
             for a file containing 5 proteins, and index of 3 would correspond

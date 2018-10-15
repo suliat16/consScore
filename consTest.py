@@ -76,7 +76,7 @@ class TestCons(biskit.test.BiskitTest):
 
     @patch('oma.requests.get')
     def test_ologs_stragg(self, requests_mock):
-        """Tests that a request with a bad status code raises an exception with get_orthologs"""
+        """Tests that a request with a bad status code raises an exception with call_orthologs"""
         requests_mock.requests.get.return_value = None
         requests_mock.requests.get.status_code = 400
         with self.assertRaises(exceptions.RequestException) as cm:

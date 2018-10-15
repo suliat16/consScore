@@ -5,8 +5,8 @@ single letter alphabet sequence is required as input.
 """
 
 import json
-import requests
 import os
+import requests
 import constool
 from biskit.errors import BiskitError
 from requests import exceptions
@@ -15,12 +15,13 @@ from requests import exceptions
 class SequenceError(BiskitError):
     pass
 
+
 class OrthologFinder:
     """
     Queries OMA with a protein sequence or fasta to try and retrieve the
     orthologs of that protein. If get_HOGs is selected instead, the Hierarchical
     Orthologous Group of the protein will be retrieved instead of the orthologs, which provides
-    a smaller group of more closely related orthologs than get_orthologs will return.
+    a smaller group of more closely related orthologs than call_orthologs will return.
     """
 
     OMA_BASE_URL = 'https://omabrowser.org'
@@ -36,26 +37,27 @@ class OrthologFinder:
         self.has_run_hogs = False
         self.save_status = 0
         self.hog_level = ""
+        self.HOGs = ""
 
     def retrieve_OMAid(self):
         """
         Takes a protein sequence and returns the oma id of the best protein
         match
-        Args:
-            sequence (str): The single letter protein sequence to be queried
         Returns:
            A string containing the ID of the best protein match for the entered sequence
         """
-        url = constool.build_url(base_url= self.OMA_BASE_URL, tail='/api/sequence/?query={0}', variation=[self.sequence])
+        url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/api/sequence/?query={0}', variation=[self.sequence])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             self.read_resp_protID(response)
         if response.status_code == 504:
             self.save_status = response.status_code
-            raise TimeoutError('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status))
+            raise TimeoutError('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'
+                               .format(self.save_status))
         if response.status_code != 200:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
+                                              .format(self.save_status))
 
     def read_resp_protID(self, response):
         response = json.loads(response.content.decode('utf-8'))
@@ -76,10 +78,12 @@ class OrthologFinder:
             return self.read_HOGid(response, root)
         if response.status_code == 504:
             self.save_status = response.status_code
-            raise TimeoutError ('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'.format(self.save_status))
+            raise TimeoutError('The database timed out. Could not determine the orthologs of your sequence. Status code {0}'
+                               .format(self.save_status))
         if response.status_code != 200:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
+                                              .format(self.save_status))
 
     def read_HOGid(self, response, root):
         """
@@ -98,9 +102,6 @@ class OrthologFinder:
         """
         Takes the OMA specific ID of a protein species, and returns a list of the
         canonical IDs of the orthologs of that protein
-
-        Args:
-            omaid(str): An OMA specific protein ID
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
         """
@@ -110,7 +111,8 @@ class OrthologFinder:
             self.read_resp_orthoIDs(response)
         else:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
+                                              .format(self.save_status))
 
     def read_resp_orthoIDs(self, response):
         """
@@ -124,9 +126,6 @@ class OrthologFinder:
         """
         Takes an OMA specific ID and returns a fasta string of the orthologs assciated
         with that protein
-
-        Args:
-            OMAid(str):  The OMA specific ID of a desired protein
         Returns:
             A single fasta string containing the orthologs of that protein, as
             dictated by OMA.Note that when the fasta file is parsed,
@@ -139,20 +138,23 @@ class OrthologFinder:
             return self.orthologs
         else:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
+                                              .format(self.save_status))
 
     def HOG_to_fasta(self):
         """
         Retrieves the fasta file containing the sequences of the proteins in the HOG of the input protein
         """
-        url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/oma/hogs/{0}/{1}/fasta/', variation=[self.id, self.hog_level])
+        url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/oma/hogs/{0}/{1}/fasta/',
+                                 variation=[self.id, self.hog_level])
         response = requests.get(url)
         if response.status_code == 200:
             self.HOGs = str(response.text)
             return self.HOGs
         else:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'.format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
+                                              .format(self.save_status))
 
     def get_HOGs(self):
         """
@@ -164,14 +166,13 @@ class OrthologFinder:
         self.sequence = constool.get_fasta_sequence(fasta=self.fasta)
         if self.has_run_hogs:
             output = self.HOGs
-            return output
         else:
             self.retrieve_OMAid()
             self.retrieve_HOG_level()
             output = self.HOG_to_fasta()
             output = constool.remove_protein(output, self.id)
             self.has_run_hogs = True
-            return output
+        return output
 
     def get_orthologs(self):
         """
@@ -189,10 +190,3 @@ class OrthologFinder:
             output = constool.seqnwl_strip(self.sequence) + os.linesep + output
             self.has_run = True
         return output
-
-
-
-
-
-
-

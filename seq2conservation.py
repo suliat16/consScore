@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Pipeline which retrieves the conservation score of the amino acids in sequence
-given an input sequence or fasta file. Intakes the sequence or fasta string of a protein using the standard, single letter alphabet,
-gets the orthologs from an external (online) database, the OMA browser. It then generates a
+given an input sequence or fasta file. Intakes the sequence or fasta string of a protein using the standard, single
+letter alphabet, gets the orthologs from an external (online) database, the OMA browser. It then generates a
 multiple sequence alignment (MSA) using Mafft, and calculates the conservation score of each
 amino acid at each position using Rate4Site, with respect to the entered sequence.
 
@@ -35,11 +35,12 @@ import os
 from biskit.errors import BiskitError
 from requests import RequestException
 
+
 class PipelineError(BiskitError):
     pass
 
 
-class ConservationPipe():
+class ConservationPipe:
 
     """
     Initializing this class creates an object that stores the parameters of the methods in the pipeline as
@@ -48,16 +49,16 @@ class ConservationPipe():
     """
 
     def __init__(self, sequence, name=None, cache=True, identity=True, score=True, qqint=False, std=False,
-                    gapped=False):
+                gapped=False):
         """
         Args:
             sequence (str): The sequence of the protein of interest, or the filepath of the fasta file containing
             the sequence of interest
             name (str): The name of the output alignment file. If a file is given, the name of the fasta file is used.
             Defaults to Protein Sequence
-            cache(boolean): When true, generated MSA is saved in a folder called protein sequences. When false, all files are deleted
-            If the following parameters are true, the output dictionary will contain that information, in the
-            order of the arguments
+            cache(boolean): When true, generated MSA is saved in a folder called protein sequences. When false, all
+            files are deleted. If the following parameters are true, the output dictionary will contain that information,
+            in the order of the arguments
                 identity (boolean): The identity of the amino acid (Single letter code) at each position
                 score(boolean): The conservation scores. lower value = higher conservation.
                 qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
@@ -80,7 +81,10 @@ class ConservationPipe():
         self.qqint = qqint
         self.gapped = gapped
         self.std = std
-
+        self.orthologs = ""
+        self.alignment = ""
+        self.scores = None
+        self.alpha = None
 
     def call_orthologs(self):
         """
@@ -96,9 +100,9 @@ class ConservationPipe():
             self.orthologs = ortholog_call.get_HOGs()
         except RequestException:
             self.orthologs = ortholog_call.get_orthologs()
-        with open("%s.orth" %(self.name), "w") as o_file:
+        with open("%s.orth" % (self.name), "w") as o_file:
             o_file.write(self.orthologs)
-        return os.getcwd() + os.sep + "%s.orth"%(self.name)
+        return os.getcwd() + os.sep + "%s.orth" % (self.name)
 
     def call_alignment(self, orthologs):
         """
@@ -121,7 +125,7 @@ class ConservationPipe():
             The alpha parameter of the data
         """
         conservation_score = aminoCons.Rate4Site(msa, cache=self.cache, identity=self.identity,
-                                                 score=self.score, qqint=self.qqint, gapped=self.gapped, std= self.std)
+                                                 score=self.score, qqint=self.qqint, gapped=self.gapped, std=self.std)
         self.scores = conservation_score.run()
         self.alpha = conservation_score.alpha
         conservation_score.close()
@@ -140,15 +144,15 @@ class ConservationPipe():
             os.makedirs(directory)
         os.chdir(directory)
 
-        msa = directory+os.sep+'%s.aln'%(self.name)
+        msa = directory+os.sep+'%s.aln' % (self.name)
         if os.path.isfile(msa):
             aln = msa
-            r4s = self.call_rate4site(aln)
+            self.call_rate4site(aln)
         else:
             orth = self.call_orthologs()
             aln = self.call_alignment(orth)
-            r4s = self.call_rate4site(aln)
-            os.remove(os.getcwd() + os.sep + "%s.orth"%(self.name))
+            self.call_rate4site(aln)
+            os.remove(os.getcwd() + os.sep + "%s.orth" % (self.name))
 
         aminoCons.clean_alignment(aln, self.cache)
         os.chdir(old_dir)
