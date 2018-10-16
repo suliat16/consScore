@@ -10,19 +10,13 @@ class ConsLogoTest(biskit.test.BiskitTest):
 
     """Test suite for the Conservation score logo generator"""
 
+    TAGS = [biskit.test.NORMAL, biskit.test.LONG, biskit.test.EXE]
+
     @classmethod
     def setUpClass(cls):
         cls.path = os.getcwd() + os.sep + 'example_data' + os.sep
         #This path is subject to change, based on where example data is stored for this file
         cls.test_logo = consLogo.OrthoLogo(cls.path + "atn1seq.fa", "PHHHQHSHIHSHLHLHQ")
-
-    def test_get_sequence_seqinput(self):
-        """Tests that given a pure sequence input, that get_sequence saves just the sequence information"""
-        seq = "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
-        test = consLogo.OrthoLogo(seq, "UUU")
-        test.get_sequence()
-        self.assertEqual(seq, test.sequence)
-        self.assertEqual('Protein_Sequence', test.name)
 
     def test_get_sequence_fileinput(self):
         """Tests that given a file as input, get_sequence retrieves the sequence inside the file-"""
@@ -59,8 +53,7 @@ class ConsLogoTest(biskit.test.BiskitTest):
     @patch('consLogo.OrthoLogo.find_motif')
     def test_run_seq2logo(self, mock_motif):
         mock_motif.return_value = 1254
-        test = self.test_logo.run_seq2logo(self.path + "atn1seq.aln")
-        self.assertTrue(os.path.isdir(test))
+        self.test_logo.run_seq2logo(self.path + "atn1seq.aln")
         self.assertTrue(os.path.isfile(os.getcwd() + os.sep + 'Seq2Logo' + os.sep + 'atn1seq_freq.mat'))
         self.assertTrue(mock_motif.called)
 

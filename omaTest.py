@@ -5,7 +5,7 @@ Created on Thu May 24 14:49:39 2018
 
 @author: suliat16
 
-Test file for cons
+Test file for oma
 """
 import biskit.test
 import os
@@ -17,7 +17,7 @@ from unittest.mock import patch, MagicMock
 
 class TestCons(biskit.test.BiskitTest):
     """
-    Test suite testing the behaviour of the cons module
+    Test suite testing the behaviour of the oma module
     """
 
     TAGS = [biskit.test.NORMAL]

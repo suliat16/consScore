@@ -18,15 +18,12 @@ class OrthoLogo:
 
     """
     Initializing this class creates an object that stores the parameters of the methods in the pipe
-    as fields. Calling the get_logo method runs the pipe, which takes a sequence or file in fasta format,
+    as fields. Calling the get_logo method runs the pipe, which takes a file in fasta format,
     as well as a motif as input and returns an image of the conserved and depleted acids in the motif.
     """
     def __init__(self, protein, motif):
-        if os.path.isfile(protein):
-            filename = os.path.basename(protein)
-            self.name = filename.split('.')[0]
-        else:
-            self.name = "Protein_Sequence"
+        filename = os.path.basename(protein)
+        self.name = filename.split('.')[0]
         self.input = protein
         self.motif = motif
         self.sequence = ""
@@ -35,14 +32,14 @@ class OrthoLogo:
 
     def get_sequence(self):
         """
-        Extracts the protein sequence from the input. Modifies the object by taking the sequence input,
-        checking whether the input is a string or a file, and extracting the sequence accordingly
+        Extracts the protein sequence from the input. Modifies the object by taking the sequence input
+        and extracting the sequence accordingly
         """
         if os.path.isfile(self.input):
             with open(self.input, "r") as file:
                 self.sequence = file.read()
         else:
-            self.sequence = self.input
+            raise oma.SequenceError("Not a file or sequence in fasta format")
 
     def call_orthologs(self):
         """
@@ -103,17 +100,14 @@ class OrthoLogo:
             """
         aln_file = os.path.basename(msa)
         self.dir_name = aln_file.split('.')[0]
+
         self.start = self.find_motif(msa, self.motif)
+        if self.start == -1:
+            raise oma.SequenceError("The motif could not be found. Please check the multiple sequence alignment.")
         self.end = self.start + len(self.motif)
         logo = Executor(name='Seq2Logo.py', args='-f %s -o %s -I 2 -C 0 -T 0 -b 0 -c %d-%d'%(msa, self.dir_name,
-                                                                                             self.start, self.end), strict=0)
-        directory = self.cwd + os.sep + 'Seq2Logo'
-        if not os.path.isdir(directory):
-           os.makedirs(directory)
-        os.chdir(directory)
+                                                                                             self.start, self.end))
         logo.run()
-        os.chdir(self.cwd)
-        return directory
 
     def get_logo(self):
         """
@@ -122,16 +116,28 @@ class OrthoLogo:
             The path to the folder containing the seq2logo output files.
         """
         self.get_sequence()
-        orth = self.call_orthologs()
-        msa = self.call_alignment(orth)
-        return self.run_seq2logo(msa)
+
+        directory = self.cwd + os.sep + 'Seq2Logo'
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        os.chdir(directory)
+
+        msa = directory +  os.sep + '%s.aln' % (self.name)
+        if os.path.isfile(msa):
+            aln = msa
+            self.run_seq2logo(aln)
+        else:
+            orth = self.call_orthologs()
+            aln = self.call_alignment(orth)
+            self.run_seq2logo(aln)
+        os.chdir(self.cwd)
+        return directory
 
 if __name__== '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("protein", help="Input the protein sequence or the path to the file containing the protein")
+    parser.add_argument("protein", help="Input the path to the file containing the protein")
     parser.add_argument("motif", help="Input the sequence of the motif of interest")
     args = parser.parse_args()
 
     logo = OrthoLogo(args.protein, args.motif)
     logo.get_logo()
-
