@@ -1,9 +1,10 @@
 """
-
+Tests for the consLogo script
 """
 import consLogo
 import os
 import biskit.test
+from requests import exceptions
 from unittest.mock import patch
 
 class ConsLogoTest(biskit.test.BiskitTest):
@@ -26,11 +27,23 @@ class ConsLogoTest(biskit.test.BiskitTest):
         self.assertEqual('atn1seq', test.name)
 
     @patch('consLogo.oma.OrthologFinder.get_HOGs')
-    def test_call_orthologs(self, HOG_mock):
+    def test_call_orthologs_hogs(self, HOG_mock):
+        """Tests that call_orthologs properly calls oma.get_HOGs"""
         HOG_mock.return_value = self.path + 'atn1seq.orth'
         test = self.test_logo.call_orthologs()
         self.assertTrue(os.path.isfile(test))
         self.assertTrue(HOG_mock.called)
+
+    @patch('consLogo.oma.OrthologFinder.get_HOGs')
+    @patch('consLogo.oma.OrthologFinder.get_orthologs')
+    def test_call_orthologs(self,orth_mock, HOG_mock):
+        """Tests that call_orthologs properly calls oma.get_orthologs if get_HOGs fails"""
+        HOG_mock.side_effect = exceptions.RequestException('There was an issue querying the database. Status code 401')
+        orth_mock.return_value = self.path + 'atn1seq.orth'
+        test = self.test_logo.call_orthologs()
+        self.assertTrue(os.path.isfile(test))
+        self.assertTrue(HOG_mock.called)
+        self.assertTrue(orth_mock.called)
 
     @patch('consLogo.aminoCons.build_alignment')
     def test_call_alignment(self, mock_aln):
@@ -52,6 +65,7 @@ class ConsLogoTest(biskit.test.BiskitTest):
 
     @patch('consLogo.OrthoLogo.find_motif')
     def test_run_seq2logo(self, mock_motif):
+        """Tests that seq2logo is configured and called within the instance"""
         mock_motif.return_value = 1254
         self.test_logo.run_seq2logo(self.path + "atn1seq.aln")
         self.assertTrue(os.path.isfile(os.getcwd() + os.sep + 'Seq2Logo' + os.sep + 'atn1seq_freq.mat'))
@@ -74,6 +88,14 @@ class ConsLogoTest(biskit.test.BiskitTest):
         self.assertTrue(mock_orth.called)
         self.assertTrue(mock_run.called)
         self.assertTrue(os.path.isdir(ret))
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(os.getcwd() + os.sep + 'atn1seq.eps')
+        os.remove(os.getcwd() + os.sep + 'atn1seq-001.jpg')
+        os.remove(os.getcwd() + os.sep + 'atn1seq_freq.mat')
+        os.remove(os.getcwd() + os.sep + 'atn1seq.txt')
+        os.remove(os.getcwd() + os.sep + 'atn1seq.orth')
 
 if __name__== '__main__':
     biskit.test.localTest()

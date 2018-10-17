@@ -10,7 +10,7 @@ import aminoCons
 import os
 import constool
 import argparse
-from requests import RequestException
+from requests import exceptions
 from biskit.exe import Executor
 
 
@@ -39,7 +39,7 @@ class OrthoLogo:
             with open(self.input, "r") as file:
                 self.sequence = file.read()
         else:
-            raise oma.SequenceError("Not a file or sequence in fasta format")
+            raise oma.SequenceError("Cannot open {0}".format(self.input))
 
     def call_orthologs(self):
         """
@@ -48,11 +48,13 @@ class OrthoLogo:
         ortholog_call = oma.OrthologFinder(self.sequence)
         try:
             self.orthologs = ortholog_call.get_HOGs()
-        except RequestException:
+        except exceptions.RequestException:
             self.orthologs = ortholog_call.get_orthologs()
+
         with open("%s.orth" %(self.name), 'w') as o_file:
             o_file.write(self.orthologs)
-        return self.cwd + os.sep + '%s.orth'%(self.name)
+
+        return os.getcwd() + os.sep + '%s.orth'%(self.name)
 
     def call_alignment(self, orthologs):
         """

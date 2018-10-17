@@ -10,6 +10,7 @@ import biskit.test
 import os
 import aminoCons
 import seq2conservation as sq
+from requests import exceptions
 from unittest.mock import patch
 
 
@@ -39,6 +40,18 @@ class Test(biskit.test.BiskitTest):
         self.assertTrue(os.path.isfile(tester))
         self.assertTrue('Protein_Sequence.orth' in tester)
 
+    @patch('consLogo.oma.OrthologFinder.get_HOGs')
+    @patch('consLogo.oma.OrthologFinder.get_orthologs')
+    def test_call_orthologs_except(self, orth_mock, HOG_mock):
+        """Tests that call_orthologs properly calls oma.get_orthologs if get_HOGs fails"""
+        HOG_mock.side_effect = exceptions.RequestException('There was an issue querying the database. Status code 401')
+        orth_mock.return_value = self.ex_seq
+        test = self.CDC48A.call_orthologs()
+        self.assertTrue(os.path.isfile(test))
+        self.assertTrue(HOG_mock.called)
+        self.assertTrue(orth_mock.called)
+        self.assertTrue('Protein_Sequence.orth' in test)
+
     @patch('seq2conservation.aminoCons.build_alignment')
     def test_call_alignment(self, mock_aln):
         """tests that call_alignment calls the correct methods and generates the correct output"""
@@ -49,7 +62,7 @@ class Test(biskit.test.BiskitTest):
         self.assertTrue('multiFasta.aln' in tester)
         aminoCons.clean_alignment(tester, cache=False)
 
-    @patch('seq2conservation.aminoCons.Rate4Site.get_alpha')
+    @patch('seq2conservation.aminoCons.get_alpha')
     def test_call_rate4site(self, mock_score):
         """tests that call_rate4site calls the correct methods and generates the correct output"""
         mock_score.return_value = 2.83688
