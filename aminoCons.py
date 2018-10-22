@@ -10,6 +10,9 @@ import os
 import re
 import warnings
 import constool
+from fractions import Fraction
+from decimal import Decimal
+from biskit import ProfileCollection
 import biskit.tools as t
 from biskit.exe import Executor
 from biskit.errors import BiskitError
@@ -128,7 +131,7 @@ class Rate4Site(Executor):
     Evol 21: 1781-1791.
     """
 
-    def __init__(self, msa, cache=True, identity=True, score=True, qqint=False, std=False,
+    def __init__(self, msa, profile=True, cache=True, identity=True, score=True, qqint=False, std=False,
                 gapped=False, **kw):
 
         aln_file = os.path.basename(msa)
@@ -145,6 +148,8 @@ class Rate4Site(Executor):
         self.qqint = qqint
         self.std = std
         self.gapped = gapped
+        self.profile = profile
+        self.num_sequences= 0
 
     def run(self, inp_mirror=None):
         """
@@ -163,8 +168,10 @@ class Rate4Site(Executor):
         """
         super().finish()
         self.alpha = get_alpha(self.score_output)
-        self.result = rate2dict(self.score_output, identity=self.identity, score=self.score,
-                                 qqint=self.qqint, std=self.std, gapped=self.gapped)
+        if self.profile:
+            self.result = self.rate2profile(self.score_output)
+        else:
+            self.result = self.rate2dict(self.score_output)
         self.has_run = True
 
     def isfailed(self):
@@ -208,6 +215,117 @@ class Rate4Site(Executor):
         t.tryRemove(self.tempdir, tree=True)
         self.has_run = False
 
+    def rate2dict(self,r4s):
+        """
+        Take the output from rate4site and convert it into a numpy array, mapping
+        each conservation score onto its corresponding amino acid.
+
+        Args:
+            r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
+            If the following parameters are true, the resulting dictionary will contain that information, in the
+            order of the arguments
+                identity (boolean): The identity of the amino acid (Single letter code) at each position
+                score(boolean): The conservation scores. lower value = higher conservation.
+                qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
+                std(boolean): The standard deviation of hte posterior rate distribution
+                gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
+                    number of sequences at each position
+        Returns:
+            An array, where the entry at each index contains information about
+            the amino acid at that position.
+        """
+        # The document is parsed by pulling splitting the text from the output file
+        # using newlines as delimiters, and grabbing only the lines that do not start
+        # with a # symbol. Whats left are the rows of the table, where each row contains
+        # information about an amino acid. The rows are then split up depending on
+        # what information it carries.
+
+        try:
+            if os.path.isfile(r4s):
+                with open(r4s, 'r') as file:
+                    contents = file.read()
+                residues = extract_resi(contents)
+                r2dict = {}
+                i = 0
+                for r in residues:
+                    r2mat = []
+                    aa_data = re.split(r'[\]\[\s,]', r)
+                    aa_data = list(filter(lambda x: x is not '', aa_data))
+                    if self.identity:
+                        amino = aa_data[1]
+                        r2mat.append(amino)
+                    if self.score:
+                        conse = float(aa_data[2])
+                        r2mat.append(conse)
+                    if self.qqint:
+                        intqq = (float(aa_data[3]), float(aa_data[4]))
+                        r2mat.append(intqq)
+                    if self.std:
+                        stdev = float(aa_data[5])
+                        r2mat.append(stdev)
+                    if self.gapped:
+                        align = aa_data[6]
+                        r2mat.append(align)
+                    r2mat = tuple(r2mat)
+                    r2dict[i] = r2mat
+                    i += 1
+                return r2dict
+            else:
+                raise FileNotFoundError
+        finally:
+            warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
+
+    def rate2profile(self, r4s):
+        """"""
+        # Note: looping over the output dictionary feels inefficient. Dw, I can copy the above and output directly into a PC
+        try:
+            if os.path.isfile(r4s):
+                with open(r4s, 'r') as file:
+                    contents = file.read()
+                residues = extract_resi(contents)
+                r2mat = ProfileCollection()
+                identity = []
+                score = []
+                qqint = []
+                std = []
+                gapped = []
+
+                for r in residues:
+                    aa_data = re.split(r'[\]\[\s,]', r)
+                    aa_data = list(filter(lambda x: x is not '', aa_data))
+                    if self.identity:
+                        amino = aa_data[1]
+                        identity.append(amino)
+                    if self.score:
+                        conse = float(aa_data[2])
+                        score.append(conse)
+                    if self.qqint:
+                        intqq = [float(aa_data[3]), float(aa_data[4])]
+                        qqint.append(intqq)
+                    if self.std:
+                        stdev = float(aa_data[5])
+                        std.append(stdev)
+                    if self.gapped:
+                        align = Fraction(aa_data[6])
+                        self.num_sequences = align.denominator
+                        percent = align.numerator / align.denominator
+                        gapped.append(percent)
+
+                if self.identity:
+                    r2mat.set('Amino Acid', identity, asarray=2)
+                if self.score:
+                    r2mat.set('Conservation Score', score, asarray=2)
+                if self.qqint:
+                    r2mat.set('QQ interval', qqint, asarray=2)
+                if self.std:
+                    r2mat.set('Standard Deviation', std, asarray=2)
+                if self.gapped:
+                    r2mat.set('Gapped', gapped)
+                return r2mat
+            else:
+                raise FileNotFoundError
+        finally:
+            warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
 
 def get_alpha(r4s):
     """
@@ -234,69 +352,6 @@ def get_alpha(r4s):
     finally:
         warnings.warn("This method is especially susceptible to changes in the format of \
         the output file", Warning)
-
-
-def rate2dict(r4s, identity=True, score=True, qqint=False, std=False,
-              gapped=False):
-    """
-    Take the output from rate4site and convert it into a numpy array, mapping
-    each conservation score onto its corresponding amino acid.
-
-    Args:
-        r4s (str): The absolute filepath to the output file from the Rate4Site program, version 2.01
-        If the following parameters are true, the resulting dictionary will contain that information, in the
-        order of the arguments
-            identity (boolean): The identity of the amino acid (Single letter code) at each position
-            score(boolean): The conservation scores. lower value = higher conservation.
-            qqint(boolean): QQ-INTERVAL, the confidence interval for the rate estimates. The default interval is 25-75 percentiles
-            std(boolean): The standard deviation of hte posterior rate distribution
-            gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
-                number of sequences at each position
-    Returns:
-        An array, where the entry at each index contains information about
-        the amino acid at that position.
-    """
-    # The document is parsed by pulling splitting the text from the output file
-    # using newlines as delimiters, and grabbing only the lines that do not start
-    # with a # symbol. Whats left are the rows of the table, where each row contains
-    # information about an amino acid. The rows are then split up depending on
-    # what information it carries.
-
-    try:
-        if os.path.isfile(r4s):
-            with open(r4s, 'r') as file:
-                contents = file.read()
-            residues = extract_resi(contents)
-            r2dict = {}
-            i = 0
-            for r in residues:
-                r2mat = []
-                aa_data = re.split(r'[\]\[\s,]', r)
-                aa_data = list(filter(lambda x: x is not '', aa_data))
-                if identity:
-                    amino = aa_data[1]
-                    r2mat.append(amino)
-                if score:
-                    conse = float(aa_data[2])
-                    r2mat.append(conse)
-                if qqint:
-                    intqq = (float(aa_data[3]), float(aa_data[4]))
-                    r2mat.append(intqq)
-                if std:
-                    stdev = float(aa_data[5])
-                    r2mat.append(stdev)
-                if gapped:
-                    align = aa_data[6]
-                    r2mat.append(align)
-                r2mat = tuple(r2mat)
-                r2dict[i] = r2mat
-                i += 1
-            return r2dict
-        else:
-            raise FileNotFoundError
-    finally:
-        warnings.warn("This method is especially susceptible to changes in the format of the output file", Warning)
-
 
 def extract_resi(string):
     """

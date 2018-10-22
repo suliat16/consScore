@@ -69,7 +69,8 @@ class test_amino_conservation(biskit.test.BiskitTest):
 
     def test_r2mat_g(self):
         """Tests that r2mat outputs the correct defaults for the dictionary"""
-        output = am.rate2dict(self.filepath + os.sep + 'multiFasta.res')
+        test = am.Rate4Site(self.filepath + os.sep + 'multiFasta.fasta')
+        output = test.rate2dict(self.filepath + os.sep + 'multiFasta.res')
         dictionary = {0:('A', 0.6979),
                     1:('A', 0.6979),
                     2:('C', 0.7026),
@@ -82,7 +83,8 @@ class test_amino_conservation(biskit.test.BiskitTest):
 
     def test_r2mat_multi(self):
         """Tests that the correct dictionary is output when some parameters are set"""
-        output = am.rate2dict(self.filepath + os.sep + 'multiFasta.res', score=True, qqint=True, gapped=True)
+        test = am.Rate4Site(self.filepath + os.sep + 'multiFasta.fasta', score=True, qqint=True, gapped=True)
+        output = test.rate2dict(self.filepath + os.sep + 'multiFasta.res')
         dictionary = {0:('A', 0.6979, (-1.946, 2.735), '3/3'),
                            1:('A', 0.6979, (-1.946, 2.735), '3/3'),
                            2:('C', 0.7026, (-1.946, 2.735), '3/3'),
@@ -94,7 +96,9 @@ class test_amino_conservation(biskit.test.BiskitTest):
         self.assertDictEqual(output, dictionary)
 
     def test_r2mat_score(self):
-        output = am.rate2dict(self.filepath + os.sep + 'multiFasta.res', score=False, qqint=True, gapped=True, std=True)
+        """Tests that correct dictionary is output when other parameters are set"""
+        test = am.Rate4Site(self.filepath + os.sep + 'multiFasta.fasta', score=False, qqint=True, gapped=True, std=True)
+        output = test.rate2dict(self.filepath + os.sep + 'multiFasta.res')
         dictionary = {0:('A', (-1.946, 2.735), 2.836, '3/3'),
                            1:('A', (-1.946, 2.735), 2.836, '3/3'),
                            2:('C', (-1.946, 2.735), 2.836, '3/3'),
@@ -105,9 +109,32 @@ class test_amino_conservation(biskit.test.BiskitTest):
                            7:('T', (-3.889, -0.7852), 2.309, '3/3')}
         self.assertDictEqual(output, dictionary)
 
+    def test_r2prof(self):
+        """tests that rate2profile correctly creates profile collections with the correct output"""
+        test = am.Rate4Site(self.filepath + os.sep + 'multiFasta.fasta', qqint=True, std=True, gapped=True)
+        output = test.rate2profile(self.filepath + os.sep + 'multiFasta.res')
+        self.assertEqual(5, len(output))
+        self.assertTrue('Amino Acid' in output)
+        self.assertTrue('Conservation Score' in output)
+        self.assertTrue('Standard Deviation' in output)
+        self.assertTrue('QQ interval' in output)
+        self.assertTrue('Gapped' in output)
+        self.assertTrue(isinstance(output, biskit.ProfileCollection))
+
+    def test_r2prof_default(self):
+        """Tests that the default rate2site instantiation produces the right profile"""
+        test = am.Rate4Site(self.filepath + os.sep + 'multiFasta.fasta')
+        output = test.rate2profile(self.filepath + os.sep + 'multiFasta.res')
+        self.assertTrue('Amino Acid' in output)
+        self.assertTrue('Conservation Score' in output)
+        self.assertEqual(2, len(output))
+        self.assertTrue(isinstance(output, biskit.ProfileCollection))
+
     def test_r4s_close(self):
         """Tests to see that close deletes the correct files"""
         r4sobject = am.Rate4Site(self.filepath + os.sep + 'multiFasta.aln')
+        r4sobject.run()
+        self.assertTrue(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.res'))
         r4sobject.close()
         self.assertFalse(os.path.isfile(os.getcwd() + os.sep + 'multiFasta.res'))
         self.assertFalse(os.path.isdir(os.getcwd() + os.sep + 'multiFasta'))
