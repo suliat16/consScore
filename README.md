@@ -21,12 +21,11 @@ The arguments of the pipe are as follows:
  - sequence (str): The sequence of the protein of interest, or the filepath of the fasta file containing
     the sequence of interest
  - name (str): The name of the output alignment file. If a file is given, the name of the fasta file is used.
-    Defaults to Protein Sequence
+    Name defaults to Protein Sequence
  - cache(boolean): When true, generated MSA is saved in a folder called protein sequences. When false, all
     files are deleted.
     
-If the following parameters are true, the output dictionary will contain that information,
-in the order of the following arguments.
+If the following parameters are true, the output will contain that information, in the order of the following arguments.
 
  - identity (boolean): The identity of the amino acid (Single letter code) at each position
  - score(boolean): The conservation scores. lower value = higher conservation.
