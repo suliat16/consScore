@@ -30,6 +30,14 @@ class test_amino_conservation(biskit.test.BiskitTest):
         am.clean_alignment(extra_aln, cache=False)
         self.assertFalse(os.path.exists(extra_aln))
 
+    def test_exe_mafft(self):
+        """Tests that the Mafft executor module calls mafft"""
+        extra_aln = am.MAFFT(self.filepath + os.sep + 'multiFasta.fasta')
+        aln_path = extra_aln.run()
+        self.assertTrue(os.path.exists(aln_path))
+        am.clean_alignment(aln_path, cache=False)
+        self.assertFalse(os.path.exists(aln_path))
+
     def test_get_num_good(self):
         """Tests that get num can retrieve a single float from a string"""
         digit = constool.get_num("Hello, how are all 1234.56 of you today")

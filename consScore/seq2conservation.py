@@ -48,7 +48,7 @@ class ConservationPipe:
     conservation related scores of each amino acid.
     """
 
-    def __init__(self, sequence, name=None, cache=True, identity=True, score=True, qqint=False, std=False,
+    def __init__(self, sequence, name=None, cache=True, profile=True, identity=True, score=True, qqint=False, std=False,
                 gapped=False):
         """
         Args:
@@ -74,8 +74,8 @@ class ConservationPipe:
         else:
             self.name = "Protein_Sequence"
         self.input = sequence
-
         self.cache = cache
+        self.profile = profile
         self.identity = identity
         self.score = score
         self.qqint = qqint
@@ -124,7 +124,7 @@ class ConservationPipe:
         Returns:
             The alpha parameter of the data
         """
-        conservation_score = aminoCons.Rate4Site(msa, cache=self.cache, identity=self.identity,
+        conservation_score = aminoCons.Rate4Site(msa, profile=self.profile, cache=self.cache, identity=self.identity,
                                                  score=self.score, qqint=self.qqint, gapped=self.gapped, std=self.std)
         self.scores = conservation_score.run()
         self.alpha = conservation_score.alpha

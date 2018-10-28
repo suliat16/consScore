@@ -11,7 +11,6 @@ import re
 import warnings
 import constool
 from fractions import Fraction
-from decimal import Decimal
 from biskit import ProfileCollection
 import biskit.tools as t
 from biskit.exe import Executor
@@ -31,6 +30,13 @@ class Rate4SiteError(BiskitError):
 class MAFFT(Executor):
 
     """
+      Calls the Mafft program to build an alignment of protein sequences
+       Args:
+           file: The absolute file path to the collection of protein sequences
+       Returns:
+           A string detailing the path to the folder containing the alignment file. The
+           alignment is output in the current working directory.
+
     Note- the alignment is given in clustal format, and the alignment method that maff uses is automatically chosen
     based on the size of the file to be aligned
     """
@@ -76,9 +82,7 @@ class MAFFT(Executor):
         return ret
 
     def fail(self):
-        """
-
-        """
+        """"""
         s = 'MAFFT failed. Please check the program output in the ' + \
             'field `output` of this MAFFT instance, (eg. `print x.output`)!'
         self.log.add(s)
@@ -86,7 +90,7 @@ class MAFFT(Executor):
 
 def build_alignment(file):
     """
-       Calls the Mafft program to build an alignment of protein sequences
+       Calls the Mafft program to build an alignment of protein sequences in fasta format
        Args:
            file: The absolute file path to the collection of protein sequences
        Returns:
