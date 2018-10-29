@@ -36,7 +36,22 @@ If the following parameters are true, the output will contain that information, 
 
 ### Setup
 
+Dependencies:
+ - Requests, http://docs.python-requests.org/en/master/
+ - Biskit, http://biskit.pasteur.fr/
+ - Mafft, https://mafft.cbrc.jp/alignment/software/
+ - Rate4Site, https://www.tau.ac.il/~itaymay/cp/rate4site.html
+ 
+Requests and Biskit are python modules, Mafft and Rate4Site are external programs. All external programs must be on the PATH (UNIX) in order to execute. 
 
+To install consScore:
+
+```UNIX
+$ git clone https://github.com/suliat16/consScore/
+$ cd consScore
+$ python setup.py install
+```
+Its recommended to run the test files to ensure that everything is installed and running properly. 
 
 ## Citations
 OMA database:
