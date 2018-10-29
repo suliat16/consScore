@@ -1,2 +1,1 @@
 ##ConsScore package
-name="consScore"
