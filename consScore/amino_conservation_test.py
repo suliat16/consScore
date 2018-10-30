@@ -6,9 +6,8 @@ Created on Sun Jul  1 16:58:25 2018
 @author: suliat16
 """
 import os
-import aminoCons as am
+from consScore import aminoCons as am
 import biskit.test
-import constool
 
 class test_amino_conservation(biskit.test.BiskitTest):
 
@@ -37,26 +36,6 @@ class test_amino_conservation(biskit.test.BiskitTest):
         self.assertTrue(os.path.exists(aln_path))
         am.clean_alignment(aln_path, cache=False)
         self.assertFalse(os.path.exists(aln_path))
-
-    def test_get_num_good(self):
-        """Tests that get num can retrieve a single float from a string"""
-        digit = constool.get_num("Hello, how are all 1234.56 of you today")
-        self.assertEqual(digit[0], 1234.56)
-
-    def test_get_num_multi(self):
-        """Tests that get_num can retrieve multiple floats and integers from a string """
-        digit = constool.get_num("Hello, how are all 1234.56 and 42 of you today")
-        self.assertEqual(digit, [1234.56, 42])
-
-    def test_get_num_none(self):
-        """Tests that a string containing no digits returns no digits"""
-        digit = constool.get_num("Oh, there are none of you today")
-        self.assertEqual(digit, [])
-
-    def test_get_num_negative(self):
-        """Tests that get_num can retrieve negative and positive numbers from within a string"""
-        digit = constool.get_num("Hello, how are all 1234.56 and -42 of you today")
-        self.assertEqual(digit, [1234.56, -42])
 
     def test_get_alpha_g(self):
         """Tests that get alpha can retrieve the alpha parameter from the file"""

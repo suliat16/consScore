@@ -29,8 +29,8 @@ Mayrose, I., Graur, D., Ben-Tal, N., and Pupko, T. 2004. Comparison of site-spec
 Bayesian methods are superior. Mol Biol Evol 21: 1781-1791.
 """
 
-import oma
-import aminoCons
+from consScore import oma
+from consScore import aminoCons
 import os
 from biskit.errors import BiskitError
 from requests import RequestException
@@ -65,6 +65,10 @@ class ConservationPipe:
                 std(boolean): The standard deviation of hte posterior rate distribution
                 gapped(boolean): MSA DATA, the number of aligned sequences having an amino acid (non-gapped) from the overall
                     number of sequences at each position
+
+        Note: If name is more than one word, then the words should not be separated using a space (For example, name="Silly Potatoes")
+        becuase this causes errors in the file handling. Instead, workds should be separated using characters such as an
+        underscore (for example, name="Silly_Potatoes").
         """
         if name:
             self.name = name

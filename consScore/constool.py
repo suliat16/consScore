@@ -26,7 +26,7 @@ def remove_protein(fasta, iden):
     fasta_string = ''
     for protein in fasta_list:
         fasta_string = fasta_string + protein + os.linesep
-    return fasta_string
+    return fasta_string.strip()
 
 
 def remove_first_protein(fasta):
@@ -41,7 +41,7 @@ def remove_first_protein(fasta):
     fasta_string = ''
     for f in fasta_list:
         fasta_string = fasta_string + f + os.linesep
-    return fasta_string
+    return fasta_string.strip()
 
 
 def header_check(sequences):
@@ -69,7 +69,7 @@ def header_check(sequences):
 def seqnwl_strip(string):
     """
     Removes the newline characters from within the sequences of the fasta
-    string
+    string- Can only take a single protein as input (in fasta format)
     Args:
         string (str): The fasta sequence with excess newline characters
     Returns:

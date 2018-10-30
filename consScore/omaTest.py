@@ -9,8 +9,8 @@ Test file for oma
 """
 import biskit.test
 import os
-import oma
-import constool
+from consScore import oma
+from consScore import constool
 from requests import exceptions
 from unittest.mock import patch, MagicMock
 
@@ -112,46 +112,6 @@ class TestCons(biskit.test.BiskitTest):
         requests_mock().status_code = 400
         with self.assertRaises(exceptions.RequestException):
             self.aggregate.retrieve_HOG_level()
-            
-    def test_get_fasta_seq(self):
-        """Tests that get_fasta_seq only gets the sequence of the fasta string, not the identifying line"""
-        tester = constool.get_fasta_sequence(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
-                                    MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
-                                    TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
-        self.assertFalse('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester)
-        self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester)
-
-    def test_get_fasta_multi(self):
-        """tests that get_fasta returns a list of sequences given a fasta file"""
-        tester = constool.get_fasta_sequence(""">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]
-MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE
->LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]
-MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE
->ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]
-MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP""", index=1)
-        self.assertFalse("[Loxodonta africana]" in tester)
-        self.assertFalse(">PROCA12070 | ENSPCAG00000012030" in tester)
-        self.assertEqual(tester, "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEASTPKVSKQGRSEEISESE")
-
-    def test_indv_blk(self):
-        """tests that indv_block can pull out individual fasta sequences with their identifying line"""
-        tester = constool.indv_block(""">OAP01791.1 CDC48A [Arabidopsis thaliana]
-                                    MSTPAESSDSKSKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQLFRGDTILIKGKKRKD
-                                    TVCIALADETCEEPKIRMNKVVRSNLRVRLGDVISVHQCPDVKYGKRVHILPVDDTVEGVTGNLFDAYLK""")
-        self.assertTrue('>OAP01791.1 CDC48A [Arabidopsis thaliana]' in tester[0])
-        self.assertTrue('SKKDFSTAILERKKSPNRLVVDEAINDDNSVVSLHPATMEKLQL' in tester[0])
-
-    def test_indv_blk_multi(self):
-        """tests that indv_block can pull out individual fasta sequences from a string with multiple"""
-        tester = constool.indv_block(">PROCA12070 | ENSPCAG00000012030 | HOG:0377891.2a.2a | [Procavia capensis]\n"
-"MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTAKKARVEEVSAPKVSKQGRGEEISESE\n"
-">LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]\n"
-"MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTA\n"
-">ECHTE02547 | ENSETEG00000016682 | HOG:0377891.2a.2a | [Echinops telfairi]\n"  
-"MKTRQNKDSMSMRSGRKKEAPGPREELRS")
-        self.assertEqual(len(tester), 3)
-        self.assertEqual(tester[1],(">LOXAF14113 | G3TAL7 | HOG:0377891.2a.2a | [Loxodonta africana]\n"
-                                    "MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQTA" ))
 
     def test_empty_input(self):
         """Checks that the correct exception is raised when an empty sequence is entered"""
@@ -168,30 +128,6 @@ MKTRQNKDSMSMRSGRKKEAPGPREELRSRGRASPGGVSTSSSDGKAEKSRQSAKKARVEEASTPKVNKQSRSEXETSAP
             fs.get_HOGs()
         err = cm.exception
         self.assertEqual(str(err), 'Input sequence is empty!')
-
-    def test_header_chk(self):
-        """test that header_check adds a header to a header-free string """
-        output = constool.header_check("Hello World")
-        self.assertEqual(output, ">Input Sequence\nHello World")
-
-    def test_ortho_empty(self):
-        """tests that header_check raises an exception if an empty sequence is entered"""
-        with self.assertRaises(constool.SequenceError) as cm:
-            constool.header_check("")
-        err = cm.exception
-        self.assertEqual(str(err), "Empty Sequence entered.")
-
-    def test_non_sequence(self):
-        """tests that header_check raises an exception if given a non alphabetic sequence"""
-        with self.assertRaises(constool.SequenceError) as sm:
-            constool.header_check("003893")
-        err = sm.exception
-        self.assertEqual(str(err), "Not a sequence. Please try again")
-
-    def test_ortho_already_fasta(self):
-        """tests that header_check doesn't change fasta sequences that already have a header"""
-        output = constool.header_check(">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
-        self.assertEqual(output, ">Pingo Pongo | Happiness\nWOEFJEKTJEJTEK")
 
     @patch('oma.requests.get')
     def test_hog_fasta(self, mock_request):

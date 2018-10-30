@@ -7,7 +7,7 @@ single letter alphabet sequence is required as input.
 import json
 import os
 import requests
-import constool
+from consScore import constool
 from biskit.errors import BiskitError
 from requests import exceptions
 
