@@ -9,13 +9,12 @@ Created on Tue Jun 26 09:45:57 2018
 import os
 import re
 import warnings
-import constool
+from consScore import constool
 from fractions import Fraction
 from biskit import ProfileCollection
 import biskit.tools as t
 from biskit.exe import Executor
 from biskit.errors import BiskitError
-
 
 class SequenceError(BiskitError):
     pass

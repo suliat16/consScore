@@ -8,8 +8,8 @@ Created on Thurs Sept 13 2018
 
 import biskit.test
 import os
-import aminoCons
-import seq2conservation as sq
+from consScore import aminoCons
+from consScore import seq2conservation as sq
 from requests import exceptions
 from unittest.mock import patch
 

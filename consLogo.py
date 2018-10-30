@@ -5,10 +5,10 @@
 
 """
 
-import oma
-import aminoCons
+from consScore import oma
+from consScore import aminoCons
 import os
-import constool
+from consScore import constool
 import argparse
 from requests import exceptions
 from biskit.exe import Executor
