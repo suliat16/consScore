@@ -11,7 +11,7 @@ amino acid at each position using Rate4Site, with respect to the entered sequenc
 To run the basic, no frills pipe, going from sequence-> conservation scores
 
 ```python
-import conscore ## import package
+import consScore ## import package
 from seq2conservation import ConservationPipe ##Import pipe module
 
 pipe = ConservationPipe(arguments) ## Create a ConservationPipe object with arguments of choice
