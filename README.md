@@ -15,7 +15,7 @@ import consScore ## import package
 from seq2conservation import ConservationPipe ##Import pipe module
 
 pipe = ConservationPipe(arguments) ## Create a ConservationPipe object with arguments of choice
-pipe.run() ## Run the pipeline, returns either a dictionary or a biskit.ProfileCollection containing the conservation score for each amino acid in the sequence
+pipe.pipe() ## Run the pipeline, returns either a dictionary or a biskit.ProfileCollection containing the conservation score for each amino acid in the sequence
 ```
 The arguments of the pipe are as follows:
  - sequence (str): The sequence of the protein of interest, or the filepath of the fasta file containing
