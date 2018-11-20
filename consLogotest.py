@@ -4,7 +4,6 @@ Tests for the consLogo script
 import consLogo
 import os
 import biskit.test
-from requests import exceptions
 from unittest.mock import patch
 
 class ConsLogoTest(biskit.test.BiskitTest):
@@ -15,7 +14,7 @@ class ConsLogoTest(biskit.test.BiskitTest):
 
     @classmethod
     def setUpClass(cls):
-        cls.path = os.getcwd() + os.sep + 'example_data' + os.sep
+        cls.path = os.getcwd() + os.sep + 'consScore' + os.sep + 'example_data' + os.sep
         #This path is subject to change, based on where example data is stored for this file
         cls.test_logo = consLogo.OrthoLogo(cls.path + "atn1seq.fa", "PHHHQHSHIHSHLHLHQ")
 
@@ -34,16 +33,14 @@ class ConsLogoTest(biskit.test.BiskitTest):
         self.assertTrue(os.path.isfile(test))
         self.assertTrue(HOG_mock.called)
 
-    @patch('consLogo.oma.OrthologFinder.get_HOGs')
     @patch('consLogo.oma.OrthologFinder.get_orthologs')
-    def test_call_orthologs(self,orth_mock, HOG_mock):
-        """Tests that call_orthologs properly calls oma.get_orthologs if get_HOGs fails"""
-        HOG_mock.side_effect = exceptions.RequestException('There was an issue querying the database. Status code 401')
+    def test_call_orthologs(self, orth_mock):
+        """tests that call_orthologs correctly calls methods to make an output file of 'orthologs'"""
         orth_mock.return_value = self.path + 'atn1seq.orth'
-        test = self.test_logo.call_orthologs()
-        self.assertTrue(os.path.isfile(test))
-        self.assertTrue(HOG_mock.called)
-        self.assertTrue(orth_mock.called)
+        test = consLogo.OrthoLogo(self.path + "atn1seq.fa", "PHHHQHSHIHSHLHLHQ", hogs=False)
+        tester = test.call_orthologs()
+        self.assertTrue(os.path.isfile(tester))
+        self.assertTrue('atn1seq.orth' in tester)
 
     @patch('consLogo.aminoCons.build_alignment')
     def test_call_alignment(self, mock_aln):
@@ -68,8 +65,8 @@ class ConsLogoTest(biskit.test.BiskitTest):
         """Tests that seq2logo is configured and called within the instance"""
         mock_motif.return_value = 1254
         self.test_logo.run_seq2logo(self.path + "atn1seq.aln")
-        self.assertTrue(os.path.isfile(os.getcwd() + os.sep + 'Seq2Logo' + os.sep + 'atn1seq_freq.mat'))
         self.assertTrue(mock_motif.called)
+        self.assertTrue(os.path.isfile(os.getcwd() + os.sep + 'atn1seq_freq.mat'))
 
     @patch('consLogo.OrthoLogo.get_sequence')
     @patch('consLogo.OrthoLogo.call_orthologs')

@@ -21,11 +21,13 @@ class OrthoLogo:
     as fields. Calling the get_logo method runs the pipe, which takes a file in fasta format,
     as well as a motif as input and returns an image of the conserved and depleted acids in the motif.
     """
-    def __init__(self, protein, motif):
+    def __init__(self, protein, motif, hogs=False, rel_type=None):
         filename = os.path.basename(protein)
         self.name = filename.split('.')[0]
         self.input = protein
         self.motif = motif
+        self.hogs = hogs
+        self.rel_type = rel_type
         self.sequence = ""
         self.cwd = os.getcwd()
         self.start = 0
@@ -45,15 +47,14 @@ class OrthoLogo:
         """
         Retrieves the HOG or the orthologs of the entered sequence by querying the OMA database
         """
-        ortholog_call = oma.OrthologFinder(self.sequence)
-        try:
+        ortholog_call = oma.OrthologFinder(self.sequence, rel_type=self.rel_type)
+        if self.hogs:
             self.orthologs = ortholog_call.get_HOGs()
-        except exceptions.RequestException:
+        else:
             self.orthologs = ortholog_call.get_orthologs()
 
         with open("%s.orth" %(self.name), 'w') as o_file:
             o_file.write(self.orthologs)
-
         return os.getcwd() + os.sep + '%s.orth'%(self.name)
 
     def call_alignment(self, orthologs):
@@ -139,7 +140,11 @@ if __name__== '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("protein", help="Input the path to the file containing the protein")
     parser.add_argument("motif", help="Input the sequence of the motif of interest")
+    parser.add_argument("--hogs", action="store_true",
+                        help="When specified, the Hierarchical Orthologous Group (HOGs) of the sequence is returned. Defaults to True.")
+    parser.add_argument("--reltype", help="Specify the type of orthologs retrieved from OMA, if hogs is false. Defaults to"
+                        "None, meaaning all ortholog types are included. Other options are '1:1', 'm:1', 'm:n'")
     args = parser.parse_args()
 
-    logo = OrthoLogo(args.protein, args.motif)
+    logo = OrthoLogo(protein=args.protein, motif=args.motif, hogs=args.hogs, rel_type=args.reltype)
     logo.get_logo()

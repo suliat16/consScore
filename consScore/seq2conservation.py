@@ -48,7 +48,7 @@ class ConservationPipe:
     conservation related scores of each amino acid.
     """
 
-    def __init__(self, sequence, name=None, cache=True, profile=True, identity=True, score=True, qqint=False, std=False,
+    def __init__(self, sequence, hogs=True, name=None, cache=True, profile=True, identity=True, score=True, qqint=False, std=False,
                 gapped=False):
         """
         Args:
@@ -67,7 +67,7 @@ class ConservationPipe:
                     number of sequences at each position
 
         Note: If name is more than one word, then the words should not be separated using a space (For example, name="Silly Potatoes")
-        becuase this causes errors in the file handling. Instead, workds should be separated using characters such as an
+        becuase this causes errors in the file handling. Instead, words should be separated using characters such as an
         underscore (for example, name="Silly_Potatoes").
         """
         if name:
@@ -79,6 +79,7 @@ class ConservationPipe:
             self.name = "Protein_Sequence"
         self.input = sequence
         self.cache = cache
+        self.hogs = hogs
         self.profile = profile
         self.identity = identity
         self.score = score
@@ -92,7 +93,7 @@ class ConservationPipe:
 
     def call_orthologs(self):
         """
-        Retrieves the HOGS of the input sequence. This is done by querying the OMA online database.
+        Retrieves the HOGs or the orthologs of the input sequence. This is done by querying the OMA online database.
         """
         if os.path.isfile(self.input):
             with open(self.input, "r") as file:
@@ -100,12 +101,13 @@ class ConservationPipe:
             ortholog_call = oma.OrthologFinder(sequence)
         else:
             ortholog_call = oma.OrthologFinder(self.input)
-        try:
+        if self.hogs:
             self.orthologs = ortholog_call.get_HOGs()
-        except RequestException:
+        else:
             self.orthologs = ortholog_call.get_orthologs()
         with open("%s.orth" % (self.name), "w") as o_file:
             o_file.write(self.orthologs)
+
         return os.getcwd() + os.sep + "%s.orth" % (self.name)
 
     def call_alignment(self, orthologs):

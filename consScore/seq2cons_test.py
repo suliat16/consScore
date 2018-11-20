@@ -33,24 +33,21 @@ class Test(biskit.test.BiskitTest):
             cls.ex_seq = file.read()
 
     @patch('seq2conservation.oma.OrthologFinder.get_HOGs')
-    def test_call_orthologs(self, HOG_mock):
+    def test_call_orthologs_hogs(self, HOG_mock):
         """tests that call_orthologs correctly calls methods to make an output file of 'orthologs'"""
         HOG_mock.return_value = self.ex_seq
         tester = self.CDC48A.call_orthologs()
         self.assertTrue(os.path.isfile(tester))
         self.assertTrue('Protein_Sequence.orth' in tester)
 
-    @patch('consLogo.oma.OrthologFinder.get_HOGs')
-    @patch('consLogo.oma.OrthologFinder.get_orthologs')
-    def test_call_orthologs_except(self, orth_mock, HOG_mock):
-        """Tests that call_orthologs properly calls oma.get_orthologs if get_HOGs fails"""
-        HOG_mock.side_effect = exceptions.RequestException('There was an issue querying the database. Status code 401')
+    @patch('seq2conservation.oma.OrthologFinder.get_orthologs')
+    def test_call_orthologs(self, orth_mock):
+        """tests that call_orthologs correctly calls methods to make an output file of 'orthologs'"""
         orth_mock.return_value = self.ex_seq
-        test = self.CDC48A.call_orthologs()
-        self.assertTrue(os.path.isfile(test))
-        self.assertTrue(HOG_mock.called)
-        self.assertTrue(orth_mock.called)
-        self.assertTrue('Protein_Sequence.orth' in test)
+        test = sq.ConservationPipe(os.getcwd()+os.sep+'example_data'+os.sep+'CDC48Aseq.txt', hogs=False, cache=False)
+        tester = test.call_orthologs()
+        self.assertTrue(os.path.isfile(tester))
+        self.assertTrue('CDC48Aseq.orth' in tester)
 
     @patch('seq2conservation.aminoCons.build_alignment')
     def test_call_alignment(self, mock_aln):
@@ -94,6 +91,7 @@ class Test(biskit.test.BiskitTest):
     @classmethod
     def tearDownClass(cls):
         os.remove(os.getcwd()+ os.sep + 'Protein_Sequence.orth')
+        os.remove(os.getcwd() + os.sep + 'CDC48Aseq.orth')
 
 if __name__ == '__main__':
     biskit.test.localTest()

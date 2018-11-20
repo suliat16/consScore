@@ -27,10 +27,11 @@ class OrthologFinder:
     OMA_BASE_URL = 'https://omabrowser.org'
     HEADERS = {'Content-Type': 'application/json'}
 
-    def __init__(self, fasta):
+    def __init__(self, fasta, rel_type=None):
         self.fasta = fasta
         self.sequence = ""
         self.id = ""
+        self.rel_type = rel_type
         self.ortholog_ids = []
         self.orthologs = ""
         self.has_run = False
@@ -105,7 +106,10 @@ class OrthologFinder:
         Returns:
             A list of strings, the canonical IDS for the orthologs of the protein
         """
-        url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/api/protein/{0}/orthologs/', variation=[self.id])
+        if not self.rel_type:
+            url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/api/protein/{0}/orthologs/rel_type={1}', variation=[self.id, self.rel_type])
+        else:
+            url = constool.build_url(base_url=self.OMA_BASE_URL, tail='/api/protein/{0}/orthologs/', variation=[self.id])
         response = requests.get(url, headers=self.HEADERS)
         if response.status_code == 200:
             self.read_resp_orthoIDs(response)
@@ -122,7 +126,7 @@ class OrthologFinder:
         for i in intro:
             self.ortholog_ids.append(i['canonicalid'])
 
-    def ortholog_to_fasta(self):
+    def ID_to_fasta(self):
         """
         Takes an OMA specific ID and returns a fasta string of the orthologs assciated
         with that protein
@@ -135,11 +139,22 @@ class OrthologFinder:
         response = requests.get(url)
         if response.status_code == 200:
             self.orthologs = str(response.text)
+            if self.rel_type:
+                self.orthologs = self.filter_rel(self.orthologs)
             return self.orthologs
         else:
             self.save_status = response.status_code
-            raise exceptions.RequestException('There was an issue querying the database. Status code {0}'
-                                              .format(self.save_status))
+            raise exceptions.RequestException('There was an issue querying the database. Status code {0}')
+
+    def filter_rel(self, orthologs):
+        """Removes out all orthologs types except for the one that was specified"""
+        ortho_list = constool.indv_block(orthologs)
+        new_ortho = []
+        for ortholog in ortho_list:
+            if self.rel_type in ortholog:
+                new_ortho.append(ortholog)
+        filtered = ''.join(new_ortho)
+        return filtered
 
     def HOG_to_fasta(self):
         """
@@ -185,7 +200,7 @@ class OrthologFinder:
             output = self.orthologs
         else:
             self.retrieve_OMAid()
-            output = self.ortholog_to_fasta()
+            output = self.ID_to_fasta()
             output = constool.remove_first_protein(output)
             output = constool.seqnwl_strip(self.sequence) + os.linesep + output
             self.has_run = True

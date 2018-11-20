@@ -86,17 +86,17 @@ class TestCons(biskit.test.BiskitTest):
 
     @patch('oma.requests.get')
     def test_ofasta_stragg(self, requests_mock):
-        """Tests that a bad request raises an exception in ortholog_to_fasta"""
+        """Tests that a bad request raises an exception in ID_to_fasta"""
         requests_mock.requests.get.status_code = 400
         with self.assertRaises(exceptions.RequestException):
-            self.aggregate.ortholog_to_fasta()
+            self.aggregate.ID_to_fasta()
 
     @patch('oma.requests.get')
     def test_ofasta_cdc(self, requests_mock):
-        """Tests that ortholog_to_fasta correctly parses the response data"""
+        """Tests that ID_to_fasta correctly parses the response data"""
         requests_mock().status_code = 200
         requests_mock().text = self.fresponse
-        test = self.CDC48A.ortholog_to_fasta()
+        test = self.CDC48A.ID_to_fasta()
         self.assertTrue('[Arabis alpina]' in test)
 
     @patch('oma.requests.get')
